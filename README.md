@@ -89,4 +89,37 @@ The API imports row by row rather than as one transaction: a bad row never block
 good ones, and each row reports created / updated / failed separately. A row whose
 barcode already exists **updates** that product, so re-importing a corrected sheet is
 safe to repeat.
-# hisaabguru-admin
+## Docker
+
+```bash
+docker build --build-arg NEXT_PUBLIC_API_BASE_URL=https://your-api/api/v1 -t hisaabguru-admin .
+docker run -p 3100:3100 hisaabguru-admin
+```
+
+`NEXT_PUBLIC_API_BASE_URL` has to be a **build arg**, not a runtime env var. Next inlines
+`NEXT_PUBLIC_*` into the client bundle during `next build`, so passing it only at `docker
+run` ships an image still pointing at the `http://localhost:8000/api/v1` fallback in
+`lib/api.ts` — the container starts fine and every API call fails in the browser.
+
+`/api/health` is the liveness probe (Docker `HEALTHCHECK` and Railway's `healthcheckPath`).
+It reports only whether the Next server is up; it deliberately does not ping the backend.
+
+## CI
+
+`.github/workflows/ci.yml` runs on push/PR to `main`: lint → typecheck → `next build`,
+then a Docker image build that boots the container and waits for `/api/health`. The image
+build is gated on the cheap checks so a typo doesn't burn a full image build.
+
+## Deploy (Railway)
+
+`railway.json` pins the Dockerfile builder and the health check. Deploys ride on
+`git push origin main` — Railway rebuilds from this repo, there is no `railway up` step.
+
+Service variables to set in Railway:
+
+- `NEXT_PUBLIC_API_BASE_URL` — e.g. `https://hisaabguru.up.railway.app/api/v1`. Railway
+  forwards service variables into the build as `ARG`s, which is what makes the build-time
+  inlining above work.
+
+Also add this service's public URL to the API's `CORS_ORIGINS`, or every request from the
+browser is blocked.

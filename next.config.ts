@@ -2,6 +2,10 @@ import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  // Emits .next/standalone with a self-contained server.js + only the traced
+  // node_modules. Without it the Docker runtime stage would have to carry the
+  // full dependency tree just to run `next start`.
+  output: 'standalone',
   images: {
     // Product photos come straight from the Open*Facts CDNs. The exact host varies
     // per record (images./static./world.), so the family is allow-listed rather than
