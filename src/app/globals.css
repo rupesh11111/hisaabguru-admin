@@ -1,0 +1,59 @@
+@import 'tailwindcss';
+
+/*
+ * Warm dukaan palette — cream ground, forest green, gold accent.
+ *
+ * Values are taken verbatim from the two surfaces that already ship it: the mobile
+ * app's `constants/app-theme.ts` and the console's `styles/tokens.css`. Do not
+ * re-pick these by eye; an admin that is a shade off reads as a different product.
+ */
+@theme {
+  --color-ground: #fbf5e9;
+  --color-surface: #ffffff;
+  --color-surface-alt: #f5efe0;
+
+  --color-ink: #0f0e0a;
+  --color-muted: #6b6557;
+  --color-line: #e5dfd0;
+
+  --color-brand: #0e6e3c;
+  --color-brand-deep: #075028;
+  --color-brand-tint: #e8f3ec;
+
+  --color-accent: #c8a64b;
+  --color-accent-deep: #b45309;
+  --color-accent-tint: #fff8e7;
+
+  --color-ok: #0e6e3c;
+  --color-ok-tint: #e8f3ec;
+  --color-danger: #b3261e;
+  --color-danger-tint: #fdecea;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background: var(--color-ground);
+  color: var(--color-ink);
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* The sidebar is the one dark surface — same gradient the console uses. */
+.sidebar-brand {
+  background: linear-gradient(
+    160deg,
+    var(--color-brand) 0%,
+    var(--color-brand-deep) 100%
+  );
+}
+
+/* Tabular figures keep count columns from jittering as rows stream in. */
+.tnum {
+  font-variant-numeric: tabular-nums;
+}
