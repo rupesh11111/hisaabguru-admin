@@ -53,7 +53,13 @@ export type AdminStats = {
 
 // ----- Products catalog -----
 
-export type ProductSource = 'openfoodfacts' | 'shop' | 'admin' | 'import';
+export type ProductSource =
+  | 'openfoodfacts'
+  | 'barcodereport'
+  | 'upcitemdb'
+  | 'shop'
+  | 'admin'
+  | 'import';
 /** Only `verified` rows are ever prefilled into a shop that doesn't stock the item. */
 export type ProductVerification = 'provisional' | 'verified' | 'rejected';
 
