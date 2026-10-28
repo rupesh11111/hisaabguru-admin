@@ -79,10 +79,13 @@ export type LookupOptions = {
  */
 const USER_AGENT = 'hisaabGuru-admin/1.0 (Web; +https://hisaabguru.app)';
 
+// India subdomains. Same global database as `world.` — compared live on 2026-10-29
+// (Maggi, Nutella: identical records; foreign products still resolve) — so this
+// loses no coverage. Keep the backend and admin lists identical.
 const DATABASES = [
-  { id: 'food', host: 'world.openfoodfacts.org' },
-  { id: 'beauty', host: 'world.openbeautyfacts.org' },
-  { id: 'products', host: 'world.openproductsfacts.org' },
+  { id: 'food', host: 'in.openfoodfacts.org' },
+  { id: 'beauty', host: 'in.openbeautyfacts.org' },
+  { id: 'products', host: 'in.openproductsfacts.org' },
 ] as const;
 
 export type DatabaseId = (typeof DATABASES)[number]['id'];
