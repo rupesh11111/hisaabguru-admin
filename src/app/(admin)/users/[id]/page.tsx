@@ -15,7 +15,13 @@ import {
   Td,
   Th,
 } from '@/components/ui';
-import { adminApi, plansApi, subscriptionsApi } from '@/lib/api';
+import {
+  adminApi,
+  autopayApi,
+  plansApi,
+  subscriptionsApi,
+  type UserAutopay,
+} from '@/lib/api';
 import { useSession } from '@/lib/session';
 import type {
   ApiRole,
@@ -376,6 +382,26 @@ function SubscriptionCard({
   );
   const [reason, setReason] = useState('');
   const [saving, setSaving] = useState(false);
+  const [autopay, setAutopay] = useState<UserAutopay | null>(null);
+
+  useEffect(() => {
+    void autopayApi
+      .get(userId)
+      .then(setAutopay)
+      .catch(() => undefined);
+  }, [userId]);
+
+  const stopAutopay = async () => {
+    if (!window.confirm('Is user ka Autopay abhi band karein? Aage koi debit nahi hoga.')) {
+      return;
+    }
+    try {
+      await autopayApi.cancel(userId);
+      setAutopay(null);
+    } catch (err) {
+      onError(err instanceof Error ? err.message : 'Autopay band nahi hua');
+    }
+  };
 
   const save = async () => {
     if (!planKey) {
@@ -414,6 +440,22 @@ function SubscriptionCard({
           Plan update karein
         </Button>
       }>
+      {autopay ? (
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-line bg-surface px-3 py-2 text-sm">
+          <span className="text-ink">
+            Autopay {autopay.status}: {autopay.planLabel},{' '}
+            {autopay.period === 'YEARLY' ? 'saalana' : 'mahina'}, Rs{' '}
+            {(autopay.amount / 100).toLocaleString('en-IN')}
+            {autopay.nextChargeAt
+              ? `, agla debit ${new Date(autopay.nextChargeAt).toLocaleDateString('en-IN')}`
+              : ''}
+            . Plan badalne se pehle Autopay band karein.
+          </span>
+          <Button onClick={() => void stopAutopay()} disabled={disabled}>
+            Autopay band karein
+          </Button>
+        </div>
+      ) : null}
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="flex flex-col gap-1.5">
           <span className="text-sm font-semibold text-ink">Plan</span>

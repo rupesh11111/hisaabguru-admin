@@ -299,3 +299,22 @@ export const subscriptionsApi = {
       body: input,
     }),
 };
+
+export type UserAutopay = {
+  status: string;
+  planLabel: string;
+  period: 'MONTHLY' | 'YEARLY';
+  /** Paise per cycle. */
+  amount: number;
+  nextChargeAt: string | null;
+  cancelAtCycleEnd: boolean;
+};
+
+export const autopayApi = {
+  get: (userId: string) =>
+    request<UserAutopay | null>(`/payments/autopay/users/${userId}`),
+  cancel: (userId: string) =>
+    request<{ cancelled: true }>(`/payments/autopay/users/${userId}/cancel`, {
+      method: 'POST',
+    }),
+};
