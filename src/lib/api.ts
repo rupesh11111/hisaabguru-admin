@@ -12,9 +12,12 @@ import type {
   ApiRole,
   AuthResponse,
   BulkImportResult,
+  CatalogOption,
+  CatalogOptionKind,
   ChangeSubscriptionInput,
   CorrectionOutcome,
   ProductCorrection,
+  CreateCatalogOptionInput,
   CreateRoleInput,
   CreateSubscriptionPlanInput,
   CurrentUser,
@@ -27,6 +30,7 @@ import type {
   ShopListItem,
   SubscriptionHistoryEntry,
   SubscriptionPlan,
+  UpdateCatalogOptionInput,
   UpdateRoleInput,
   UpdateSubscriptionPlanInput,
   UpsertProductInput,
@@ -276,6 +280,32 @@ export const plansApi = {
     request<{ ok: boolean }>(`/admin/subscription-plans/${id}`, { method: 'DELETE' }),
   restore: (id: string) =>
     request<SubscriptionPlan>(`/admin/subscription-plans/${id}/restore`, {
+      method: 'POST',
+    }),
+};
+
+// ----- Catalog options -----
+
+export const catalogOptionsApi = {
+  list: (kind: CatalogOptionKind, archived = false) =>
+    request<CatalogOption[]>('/admin/meta/catalog-options', {
+      query: { kind, archived: archived ? 'true' : undefined },
+    }),
+  create: (input: CreateCatalogOptionInput) =>
+    request<CatalogOption>('/admin/meta/catalog-options', {
+      method: 'POST',
+      body: input,
+    }),
+  update: (id: string, input: UpdateCatalogOptionInput) =>
+    request<CatalogOption>(`/admin/meta/catalog-options/${id}`, {
+      method: 'PATCH',
+      body: input,
+    }),
+  /** Refused for system rows; allowed while in use, since items keep their value. */
+  archive: (id: string) =>
+    request<{ ok: boolean }>(`/admin/meta/catalog-options/${id}`, { method: 'DELETE' }),
+  restore: (id: string) =>
+    request<CatalogOption>(`/admin/meta/catalog-options/${id}/restore`, {
       method: 'POST',
     }),
 };

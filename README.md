@@ -50,6 +50,7 @@ src/
     (admin)/                   auth-gated shell with sidebar
       page.tsx                 overview / stats
       products/                catalog: list, edit, bulk import
+      catalog-options/         fixed category and unit lists
       shops/  users/           browse + detail, role changes, shop delete
       plans/  roles/           subscription plans, RBAC editor
   components/ui.tsx            buttons, inputs, cards, tables, dialogs
@@ -80,8 +81,9 @@ scanning in the mobile app.
 
 Two modes at `/products/import`:
 
-- **CSV paste** — `name, category, unit, barcodes` (header optional; multiple barcodes
-  separated by `|` or spaces). Bad rows are flagged client-side before anything is sent.
+- **CSV paste** — `name, category, unit, barcodes, pack size` (header optional; multiple
+  barcodes separated by `|` or spaces). Bad rows are flagged client-side before anything
+  is sent.
 - **Scan queue** — scan codes one after another; each row is prefilled from
   Open*Facts and stays editable before import.
 

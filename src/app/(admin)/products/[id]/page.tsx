@@ -18,13 +18,13 @@ import {
   Td,
   Th,
 } from '@/components/ui';
-import { ApiError, adminApi } from '@/lib/api';
+import { ApiError, adminApi, catalogOptionsApi } from '@/lib/api';
 import {
   BarcodeLookupError,
   assertScannableBarcode,
   lookupBarcode,
 } from '@/lib/openfoodfacts';
-import type { ProductCorrection, ProductDetail } from '@/lib/types';
+import type { CatalogOption, ProductCorrection, ProductDetail } from '@/lib/types';
 
 type Json = Record<string, unknown>;
 
@@ -32,14 +32,19 @@ type Form = {
   name: string;
   category: string;
   unit: string;
+  packSize: string;
   barcodes: string[];
   offData: Json | null;
 };
 
+/** The API's limit. OFF text can run longer, and a prefill must not fail the save. */
+const PACK_SIZE_MAX = 40;
+
 const EMPTY_FORM: Form = {
   name: '',
   category: '',
-  unit: '',
+  unit: 'piece',
+  packSize: '',
   barcodes: [],
   offData: null,
 };
@@ -49,9 +54,23 @@ function formOf(p: ProductDetail): Form {
     name: p.name,
     category: p.category,
     unit: p.unit,
+    packSize: p.packSize ?? '',
     barcodes: p.barcodes,
     offData: p.openFoodFactsData,
   };
+}
+
+/**
+ * Maps an upstream category onto the fixed list. Blank only when `Uncategorised` is
+ * itself unavailable, so the form never holds a value the picker cannot show.
+ */
+function matchCategory(upstream: string | undefined, options: CatalogOption[]): string {
+  const find = (text: string) =>
+    options.find((o) =>
+      [o.value, o.labelEnglish].some((v) => v.toLowerCase() === text),
+    )?.value;
+  const wanted = upstream?.trim().toLowerCase();
+  return (wanted ? find(wanted) : undefined) ?? find('uncategorised') ?? '';
 }
 
 /** One screen serves both modes; `/products/new` routes here with id === 'new'. */
@@ -77,6 +96,12 @@ export default function ProductEditPage() {
   const [overrideCustomized, setOverrideCustomized] = useState(false);
   const [corrections, setCorrections] = useState<ProductCorrection[]>([]);
   const [verifying, setVerifying] = useState(false);
+  /** Null until loaded, and stays null if loading failed. */
+  const [catalog, setCatalog] = useState<{
+    categories: CatalogOption[];
+    units: CatalogOption[];
+  } | null>(null);
+  const [optionsError, setOptionsError] = useState<string | null>(null);
 
   const patch = useCallback(
     (next: Partial<Form>) => setForm((prev) => ({ ...prev, ...next })),
@@ -108,6 +133,25 @@ export default function ProductEditPage() {
     };
   }, [id, isNew]);
 
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all([
+      catalogOptionsApi.list('CATEGORY'),
+      catalogOptionsApi.list('UNIT'),
+    ])
+      .then(([categories, units]) => {
+        if (!cancelled) setCatalog({ categories, units });
+      })
+      .catch((err: unknown) => {
+        if (!cancelled) {
+          setOptionsError(err instanceof Error ? err.message : 'Options load fail');
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const dirty = useMemo(
     () => JSON.stringify(form) !== JSON.stringify(baseline),
     [form, baseline],
@@ -137,6 +181,8 @@ export default function ProductEditPage() {
         name: form.name.trim(),
         category: form.category.trim(),
         unit: form.unit.trim(),
+        // Null, not undefined: omitting it would leave a cleared field on the server.
+        packSize: form.packSize.trim() || null,
         barcodes: form.barcodes,
         openFoodFactsData: form.offData,
       };
@@ -186,6 +232,9 @@ export default function ProductEditPage() {
       out.push(`Category: "${baseline.category}" → "${form.category}"`);
     }
     if (form.unit !== baseline.unit) out.push(`Unit: "${baseline.unit}" → "${form.unit}"`);
+    if (form.packSize !== baseline.packSize) {
+      out.push(`Pack size: "${baseline.packSize}" → "${form.packSize}"`);
+    }
 
     const added = form.barcodes.filter((b) => !baseline.barcodes.includes(b));
     const removed = baseline.barcodes.filter((b) => !form.barcodes.includes(b));
@@ -322,6 +371,11 @@ export default function ProductEditPage() {
       </header>
 
       {error ? <ErrorNote message={error} /> : null}
+      {optionsError ? (
+        <ErrorNote
+          message={`Categories/units load nahi hue (${optionsError}). Maujooda value save ho sakti hai, par nayi value chunne ke liye page reload karein.`}
+        />
+      ) : null}
       {notice ? (
         <p className="rounded-lg border border-ok/30 bg-ok-tint px-3 py-2 text-sm font-medium text-ok">
           {notice}
@@ -342,17 +396,27 @@ export default function ProductEditPage() {
                   placeholder="Parle-G Biscuit 100g"
                 />
               </div>
-              <Input
+              <OptionSelect
                 label="Category *"
                 value={form.category}
-                onChange={(e) => patch({ category: e.target.value })}
-                placeholder="Biscuits"
+                saved={baseline.category}
+                options={catalog?.categories ?? null}
+                onChange={(category) => patch({ category })}
               />
-              <Input
+              <OptionSelect
                 label="Unit *"
                 value={form.unit}
-                onChange={(e) => patch({ unit: e.target.value })}
-                placeholder="packet"
+                saved={baseline.unit}
+                options={catalog?.units ?? null}
+                onChange={(unit) => patch({ unit })}
+              />
+              <Input
+                label="Pack size"
+                value={form.packSize}
+                onChange={(e) => patch({ packSize: e.target.value })}
+                placeholder="100 g"
+                maxLength={PACK_SIZE_MAX}
+                hint="Ek pack me kitna hai. Unit batata hai ki item kaise ginte hain."
               />
             </div>
           </Card>
@@ -361,12 +425,19 @@ export default function ProductEditPage() {
             barcodes={form.barcodes}
             onChange={(barcodes) => patch({ barcodes })}
             onPrefill={(p) => {
-              // Never clobber what the admin already typed — fill only the blanks.
-              patch({
-                name: form.name.trim() || (p.brand ? `${p.brand} ${p.name}` : p.name),
-                category: form.category.trim() || p.category || '',
-                unit: form.unit.trim() || p.quantity || '',
-              });
+              // Never clobber what the admin already typed — fill only the blanks. Unit is
+              // left alone: OFF's `quantity` is a pack size ("100 g"), not a unit. Functional
+              // update because the lookup is async and the admin may type meanwhile.
+              setForm((prev) => ({
+                ...prev,
+                name: prev.name.trim() || (p.brand ? `${p.brand} ${p.name}` : p.name),
+                category:
+                  prev.category.trim() ||
+                  matchCategory(p.category, catalog?.categories ?? []),
+                packSize:
+                  prev.packSize.trim() ||
+                  (p.quantity ?? '').slice(0, PACK_SIZE_MAX).trim(),
+              }));
             }}
           />
 
@@ -520,6 +591,7 @@ export default function ProductEditPage() {
             <li>Name: {form.name.trim()}</li>
             <li>Category: {form.category.trim()}</li>
             <li>Unit: {form.unit.trim()}</li>
+            <li>Pack size: {form.packSize.trim() || 'koi nahi'}</li>
             <li>
               Barcodes:{' '}
               {form.barcodes.length > 0 ? form.barcodes.join(', ') : 'koi nahi'}
@@ -642,6 +714,62 @@ function MetaRow({
         {value}
       </dd>
     </div>
+  );
+}
+
+/**
+ * Picker over the fixed list that still tolerates rows predating it.
+ *
+ * A value outside the active list (legacy text like "1 kg", or an archived option)
+ * stays selectable as an old value: otherwise the browser would show the first option
+ * while the form still held the old text, and fixing an unrelated field would be
+ * blocked or would change this one silently. `saved` keeps it available after the
+ * admin moves away, so they can move back.
+ */
+function OptionSelect({
+  label,
+  value,
+  saved,
+  options,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  saved: string;
+  /** Null while loading or after a failed load. */
+  options: CatalogOption[] | null;
+  onChange: (next: string) => void;
+}) {
+  const active = new Set(options?.map((o) => o.value));
+  const old = [...new Set([value, saved])].filter((v) => v.trim() && !active.has(v));
+
+  return (
+    <label className="flex flex-col gap-1.5">
+      <span className="text-sm font-semibold text-ink">{label}</span>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        disabled={options === null}
+        className="rounded-lg border border-line bg-surface px-3 py-2 text-sm outline-none focus:border-brand disabled:opacity-50">
+        <option value="">— select —</option>
+        {old.map((v) => (
+          <option key={v} value={v}>
+            {/* Until the list is in, nothing is known to be old. */}
+            {options === null ? v : `${v} (old value)`}
+          </option>
+        ))}
+        {options?.map((o) => (
+          <option key={o.id} value={o.value}>
+            {o.labelEnglish}
+          </option>
+        ))}
+      </select>
+      {options !== null && value && !active.has(value) ? (
+        <span className="text-xs text-muted">
+          Purani value hai, list me nahi. Rehne de sakte hain, ya list se chun lein.
+        </span>
+      ) : null}
+    </label>
   );
 }
 

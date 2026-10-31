@@ -47,7 +47,15 @@ creating two rows for the same trade item — the backend normalises identically
 
 `lib/openfoodfacts.ts` looks codes up across Open Food/Beauty/Products Facts with
 retry, a TTL cache and single-flight dedup. Coverage for Indian SKUs is patchy — it
-prefills a form, it is not a source of truth.
+prefills a form, it is not a source of truth. Its `quantity` ("100 g") is a pack size:
+it goes in `packSize`, never in `unit`.
+
+Category and unit are picked from `catalogOptionsApi`, but older rows hold free text the
+list does not contain. The product form must keep showing such a value as an old value,
+or the select displays the first option while the form still holds the text.
+
+Bulk import must never send a row with a blank name: `items` is validated as a whole, so
+one such row is a 400 for the batch and the per-row reporting never runs.
 
 Approving a product here is what lets it be prefilled into **other** shops' inventories
 (backend `verification: provisional → verified`). Editing name/category/unit propagates

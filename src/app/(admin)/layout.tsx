@@ -10,6 +10,7 @@ import { hasAdminAccess, useSession } from '@/lib/session';
 const NAV = [
   { href: '/', label: 'Overview' },
   { href: '/products', label: 'Products' },
+  { href: '/catalog-options', label: 'Categories & Units' },
   { href: '/shops', label: 'Shops' },
   { href: '/users', label: 'Users' },
   { href: '/plans', label: 'Plans' },

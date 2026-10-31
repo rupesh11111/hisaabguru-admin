@@ -68,6 +68,8 @@ export type ProductListItem = {
   name: string;
   category: string;
   unit: string;
+  /** Free text such as "100 g". What a pack holds; `unit` is how it is counted. */
+  packSize: string | null;
   barcodes: string[];
   shopsStockingCount: number;
   source: ProductSource;
@@ -129,6 +131,8 @@ export type UpsertProductInput = {
   name: string;
   category: string;
   unit: string;
+  /** Omit to leave it as it is; `null` clears it. */
+  packSize?: string | null;
   barcodes?: string[];
   /** Stored on the audit row. */
   reason?: string;
@@ -167,12 +171,49 @@ export type BulkImportRowResult = {
   status: 'created' | 'updated' | 'failed';
   message?: string;
   productId?: string;
+  /** Only what changed from the sheet. `packSize` is unit text moved there. */
+  mapped?: {
+    category?: { from: string; to: string };
+    unit?: { from: string; to: string };
+    packSize?: string;
+  };
 };
 
 export type BulkImportResult = {
   summary: { total: number; created: number; updated: number; failed: number };
   results: BulkImportRowResult[];
 };
+
+// ----- Catalog options -----
+
+export type CatalogOptionKind = 'CATEGORY' | 'UNIT';
+
+export type CatalogOption = {
+  id: string;
+  kind: CatalogOptionKind;
+  /** What gets stored on items, so it is immutable once created. */
+  value: string;
+  labelHinglish: string;
+  labelHindi: string;
+  labelEnglish: string;
+  sortOrder: number;
+  isSystem: boolean;
+  archivedAt: string | null;
+  usage: { inventory: number; products: number };
+};
+
+export type CreateCatalogOptionInput = {
+  kind: CatalogOptionKind;
+  value: string;
+  labelHinglish: string;
+  labelHindi: string;
+  labelEnglish: string;
+  sortOrder?: number;
+};
+
+export type UpdateCatalogOptionInput = Partial<
+  Omit<CreateCatalogOptionInput, 'kind' | 'value'>
+>;
 
 // ----- Users -----
 

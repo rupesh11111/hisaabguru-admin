@@ -17,13 +17,43 @@ import {
 } from '@/components/ui';
 import { adminApi } from '@/lib/api';
 import { BarcodeLookupError, assertScannableBarcode, lookupBarcode } from '@/lib/openfoodfacts';
-import type { BulkImportResult, UpsertProductInput } from '@/lib/types';
+import type {
+  BulkImportResult,
+  BulkImportRowResult,
+  UpsertProductInput,
+} from '@/lib/types';
 
-const SAMPLE = `name,category,unit,barcodes
-Parle-G Biscuit 100g,Biscuits,packet,8901719101083
-Coca Cola Can 330ml,Beverages,can,049000006346|8901234567894`;
+const SAMPLE = `name,category,unit,barcodes,pack size
+Parle-G Biscuit 100g,Biscuits,packet,8901719101083,100 g
+Coca Cola Can 330ml,Beverages,can,049000006346|8901234567894,330 ml`;
 
 type ParsedRow = UpsertProductInput & { line: number; error?: string };
+
+/**
+ * Why this row must not be sent. A blank name fails DTO validation, which rejects the
+ * whole batch. A blank category or unit would pass and quietly become the server's
+ * fallback, so the admin gets to fill it in first.
+ */
+function rowProblem(r: ParsedRow): string | undefined {
+  if (r.error) return r.error;
+  const missing = [
+    !r.name.trim() && 'name',
+    !r.category.trim() && 'category',
+    !r.unit.trim() && 'unit',
+  ].filter(Boolean);
+  return missing.length > 0 ? `${missing.join(', ')} khaali hai` : undefined;
+}
+
+/** What the server turned a row's text into, so a mapped row isn't mistaken for as-typed. */
+function describeMapped(mapped: BulkImportRowResult['mapped']): string | undefined {
+  if (!mapped) return undefined;
+  const parts = [
+    mapped.category && `Category: "${mapped.category.from}" → "${mapped.category.to}"`,
+    mapped.unit && `Unit: "${mapped.unit.from}" → "${mapped.unit.to}"`,
+    mapped.packSize && `Pack size: "${mapped.packSize}"`,
+  ].filter(Boolean);
+  return parts.length > 0 ? parts.join(' · ') : undefined;
+}
 
 /**
  * CSV parser for the paste box.
@@ -72,8 +102,10 @@ function parseCsv(text: string): ParsedRow[] {
         category: header.indexOf('category'),
         unit: header.indexOf('unit'),
         barcodes: header.indexOf('barcodes'),
+        packSize: header.findIndex((h) => /^pack[ _]?size$/.test(h)),
       }
-    : { name: 0, category: 1, unit: 2, barcodes: 3 };
+    : // Last, not beside unit: a headerless sheet from before this column stays valid.
+      { name: 0, category: 1, unit: 2, barcodes: 3, packSize: 4 };
 
   const body = hasHeader ? lines.slice(1) : lines;
 
@@ -104,6 +136,7 @@ function parseCsv(text: string): ParsedRow[] {
       name: at(cols.name),
       category: at(cols.category),
       unit: at(cols.unit),
+      packSize: at(cols.packSize),
       barcodes,
       error,
     };
@@ -126,7 +159,9 @@ export default function ProductImportPage() {
   const [scanError, setScanError] = useState<string | null>(null);
 
   const rows = mode === 'csv' ? parsed : scanRows;
-  const validRows = rows.filter((r) => !r.error && r.name.trim());
+  const validRows = rows.filter((r) => !rowProblem(r));
+  // Rows with `error` already explain themselves; these are the ones only this check stops.
+  const blankRows = rows.filter((r) => !r.error && rowProblem(r)).length;
 
   const addScan = async () => {
     const raw = scanDraft.trim();
@@ -154,7 +189,8 @@ export default function ProductImportPage() {
           line: prev.length + 1,
           name: found ? (found.brand ? `${found.brand} ${found.name}` : found.name) : '',
           category: found?.category ?? '',
-          unit: found?.quantity ?? '',
+          unit: 'piece',
+          packSize: found?.quantity ?? '',
           barcodes: [code],
           error: found ? undefined : 'OpenFoodFacts me nahi mila — details bharein',
         },
@@ -167,7 +203,8 @@ export default function ProductImportPage() {
           line: prev.length + 1,
           name: '',
           category: '',
-          unit: '',
+          unit: 'piece',
+          packSize: '',
           barcodes: [code],
           error: err instanceof BarcodeLookupError ? err.message : 'Lookup fail',
         },
@@ -201,6 +238,8 @@ export default function ProductImportPage() {
         name: r.name.trim(),
         category: r.category.trim(),
         unit: r.unit.trim(),
+        // Omitted when blank: a sheet without this column must not wipe stored pack sizes.
+        packSize: r.packSize?.trim() || undefined,
         barcodes: r.barcodes,
       }));
       setResult(await adminApi.bulkImportProducts(payload));
@@ -242,7 +281,7 @@ export default function ProductImportPage() {
       {mode === 'csv' ? (
         <Card
           title="CSV paste karein"
-          subtitle="Columns: name, category, unit, barcodes. Header optional. Ek se zyada barcode ho to | ya space se alag karein."
+          subtitle="Columns: name, category, unit, barcodes, pack size. Header optional. Ek se zyada barcode ho to | ya space se alag karein. Jo category/unit list me nahi, unhe server map karta hai — neeche result me dikhega."
           actions={
             <Button variant="secondary" onClick={() => setCsv(SAMPLE)}>
               Sample bharein
@@ -296,11 +335,15 @@ export default function ProductImportPage() {
       {rows.length > 0 ? (
         <Card
           title={`${rows.length} rows — ${validRows.length} import hone laayak`}
-          subtitle={
+          subtitle={`${
+            blankRows > 0
+              ? `${blankRows} rows me name, category ya unit khaali hai — bheji nahi jayengi. `
+              : ''
+          }${
             mode === 'scan'
               ? 'Khaali fields bhar dein; jo rows adhoori hain woh skip ho jayengi.'
               : 'Laal rows skip ho jayengi. CSV theek karke dobara paste karein.'
-          }
+          }`}
           actions={
             <Button onClick={() => void runImport()} loading={busy} disabled={validRows.length === 0}>
               {validRows.length} products import karein
@@ -313,12 +356,13 @@ export default function ProductImportPage() {
                 <Th>Name</Th>
                 <Th>Category</Th>
                 <Th>Unit</Th>
+                <Th>Pack size</Th>
                 <Th>Barcodes</Th>
               </tr>
             </thead>
             <tbody>
               {rows.map((r, i) => (
-                <tr key={`${r.line}-${i}`} className={r.error ? 'bg-danger-tint/40' : ''}>
+                <tr key={`${r.line}-${i}`} className={rowProblem(r) ? 'bg-danger-tint/40' : ''}>
                   <Td className="tnum text-muted">{r.line}</Td>
                   <Td>
                     {mode === 'scan' ? (
@@ -331,8 +375,8 @@ export default function ProductImportPage() {
                     ) : (
                       <span className="font-semibold text-ink">{r.name || '—'}</span>
                     )}
-                    {r.error ? (
-                      <p className="mt-1 text-xs font-medium text-danger">{r.error}</p>
+                    {rowProblem(r) ? (
+                      <p className="mt-1 text-xs font-medium text-danger">{rowProblem(r)}</p>
                     ) : null}
                   </Td>
                   <Td>
@@ -357,6 +401,18 @@ export default function ProductImportPage() {
                       />
                     ) : (
                       <span className="text-muted">{r.unit || '—'}</span>
+                    )}
+                  </Td>
+                  <Td>
+                    {mode === 'scan' ? (
+                      <input
+                        value={r.packSize ?? ''}
+                        onChange={(e) => editScanRow(i, { packSize: e.target.value })}
+                        placeholder="100 g"
+                        className="w-24 rounded border border-line bg-surface px-2 py-1 text-sm"
+                      />
+                    ) : (
+                      <span className="text-muted">{r.packSize || '—'}</span>
                     )}
                   </Td>
                   <Td className="tnum font-mono text-xs text-muted">
@@ -413,7 +469,9 @@ export default function ProductImportPage() {
                         }
                       />
                     </Td>
-                    <Td className="text-muted">{r.message ?? '—'}</Td>
+                    <Td className="text-muted">
+                      {r.message ?? describeMapped(r.mapped) ?? '—'}
+                    </Td>
                   </tr>
                 ))}
               </tbody>
