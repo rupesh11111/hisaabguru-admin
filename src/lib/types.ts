@@ -8,7 +8,7 @@
 
 export type PlatformRole = 'SUPER_ADMIN' | 'ADMIN' | 'USER';
 export type ShopRole = 'OWNER' | 'EMPLOYEE';
-export type SubscriptionTier = 'FREE' | 'PRO' | 'ENTERPRISE';
+export type SubscriptionTier = string;
 export type SubscriptionStatus = 'ACTIVE' | 'EXPIRED' | 'CANCELLED' | 'TRIAL';
 
 // ----- Auth -----
