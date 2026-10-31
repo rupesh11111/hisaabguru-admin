@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { OffDataPanel } from '@/components/off-data-panel';
+import { ProductPhotos } from '@/components/product-photos';
 import {
   Badge,
   Button,
@@ -420,6 +421,23 @@ export default function ProductEditPage() {
               />
             </div>
           </Card>
+
+          {product ? (
+            // Merged, and the form left alone: a photo is applied at once and must not
+            // disturb unsaved edits or the baseline the dirty check compares against.
+            <ProductPhotos
+              product={product}
+              onChange={(updated) =>
+                setProduct((prev) => (prev ? { ...prev, ...updated } : updated))
+              }
+            />
+          ) : isNew ? (
+            <Card title="Photos">
+              <p className="text-sm text-muted">
+                Pehle product save karein, phir photos add kar sakte hain.
+              </p>
+            </Card>
+          ) : null}
 
           <BarcodesCard
             barcodes={form.barcodes}

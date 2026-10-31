@@ -83,6 +83,8 @@ export type ProductListItem = {
 };
 
 export type ProductDetail = ProductListItem & {
+  /** Every photo, first shown first; `imageUrl` is the first of these. */
+  imageUrls: string[];
   openFoodFactsData: Record<string, unknown> | null;
   verifiedAt: string | null;
   createdByShopId: string | null;

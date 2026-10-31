@@ -57,6 +57,10 @@ or the select displays the first option while the form still holds the text.
 Bulk import must never send a row with a blank name: `items` is validated as a whole, so
 one such row is a 400 for the batch and the per-row reporting never runs.
 
+Product photos use a plain `<img>`, not `next/image`. `remotePatterns` is fixed at build
+time, while provider CDN hosts are open-ended, so `next/image` would throw on them. Do not list
+hosts in `next.config.ts` to "fix" this.
+
 Approving a product here is what lets it be prefilled into **other** shops' inventories
 (backend `verification: provisional → verified`). Editing name/category/unit propagates
 into every shop that has not customised that field and notifies them by push. Both are

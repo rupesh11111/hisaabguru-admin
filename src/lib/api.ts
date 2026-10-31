@@ -97,7 +97,12 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     }
   }
 
-  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  // A FormData body must not get a Content-Type: the browser writes one that carries
+  // the multipart boundary, and without that boundary the server cannot parse the body.
+  const multipart = body instanceof FormData;
+  const headers: Record<string, string> = multipart
+    ? {}
+    : { 'Content-Type': 'application/json' };
   if (!skipAuth) {
     const token = getToken();
     if (token) headers.Authorization = `Bearer ${token}`;
@@ -108,7 +113,11 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     res = await fetch(url.toString(), {
       method,
       headers,
-      body: body !== undefined ? JSON.stringify(body) : undefined,
+      body: multipart
+        ? body
+        : body !== undefined
+          ? JSON.stringify(body)
+          : undefined,
       signal,
     });
   } catch (err) {
@@ -215,6 +224,20 @@ export const adminApi = {
     request<BulkImportResult>('/admin/products/bulk', {
       method: 'POST',
       body: { items },
+    }),
+  /** The new photo goes first. Shows in every shop; 503 if storage is not configured. */
+  addProductPhoto: (id: string, file: File) => {
+    const body = new FormData();
+    body.append('file', file);
+    return request<ProductDetail>(`/admin/products/${id}/photos`, {
+      method: 'POST',
+      body,
+    });
+  },
+  removeProductPhoto: (id: string, url: string) =>
+    request<ProductDetail>(`/admin/products/${id}/photos`, {
+      method: 'DELETE',
+      body: { url },
     }),
 
   // Users
