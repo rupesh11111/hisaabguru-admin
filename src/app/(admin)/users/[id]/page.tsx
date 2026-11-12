@@ -22,6 +22,7 @@ import {
   subscriptionsApi,
   type UserAutopay,
 } from '@/lib/api';
+import { fmtDateTime } from '@/lib/format';
 import { useSession } from '@/lib/session';
 import type {
   ApiRole,
@@ -85,7 +86,7 @@ function formatWhen(iso: string | null | undefined): string {
   if (!iso) return '—';
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return '—';
-  return d.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+  return fmtDateTime(d);
 }
 
 export default function UserDetailPage() {

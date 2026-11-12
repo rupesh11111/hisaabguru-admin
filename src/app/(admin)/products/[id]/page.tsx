@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
+import { fmtDateTime } from '@/lib/format';
 import { OffDataPanel } from '@/components/off-data-panel';
 import { ProductPhotos } from '@/components/product-photos';
 import {
@@ -309,7 +310,7 @@ export default function ProductEditPage() {
                 <span>{stockedBy.length} shops stock kar rahi hain</span>
                 <span aria-hidden>·</span>
                 <span className="tnum">
-                  updated {new Date(product.updatedAt).toLocaleString()}
+                  updated {fmtDateTime(product.updatedAt)}
                 </span>
               </>
             ) : (
@@ -524,7 +525,7 @@ export default function ProductEditPage() {
                           </div>
                         ))}
                         <p className="tnum mt-0.5 text-xs text-muted">
-                          {new Date(c.createdAt).toLocaleString()}
+                          {fmtDateTime(c.createdAt)}
                         </p>
                       </Td>
                       <Td className="text-muted">{c.reason ?? '—'}</Td>
@@ -571,17 +572,17 @@ export default function ProductEditPage() {
                 <MetaRow label="Product ID" value={product.id} mono />
                 <MetaRow
                   label="Created"
-                  value={new Date(product.createdAt).toLocaleString()}
+                  value={fmtDateTime(product.createdAt)}
                 />
                 <MetaRow
                   label="Updated"
-                  value={new Date(product.updatedAt).toLocaleString()}
+                  value={fmtDateTime(product.updatedAt)}
                 />
                 <MetaRow
                   label="Archived"
                   value={
                     product.archivedAt
-                      ? new Date(product.archivedAt).toLocaleString()
+                      ? fmtDateTime(product.archivedAt)
                       : 'nahi'
                   }
                 />
