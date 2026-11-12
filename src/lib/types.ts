@@ -266,6 +266,13 @@ export type ShopDetail = {
   shopName: string;
   ownerName: string;
   city: string;
+  /** Absent from API builds older than the shop address. */
+  addressLine?: string | null;
+  area?: string | null;
+  state?: string | null;
+  pincode?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
   upiId: string | null;
   owner: { id: string; phoneNumber: string } | null;
   createdAt: string;

@@ -66,6 +66,14 @@ export default function ShopDetailPage() {
   }
   if (!shop) return <ErrorNote message={error ?? 'Shop nahi mili'} />;
 
+  const address = [
+    shop.addressLine,
+    shop.area,
+    [shop.state, shop.pincode].filter(Boolean).join(' '),
+  ]
+    .filter(Boolean)
+    .join(', ');
+
   return (
     <div className="flex flex-col gap-6">
       <header>
@@ -77,6 +85,16 @@ export default function ShopDetailPage() {
           {shop.city} · owner {shop.ownerName}
           {shop.owner ? ` (${shop.owner.phoneNumber})` : ''}
         </p>
+        {address ? <p className="text-sm text-muted">{address}</p> : null}
+        {shop.latitude != null && shop.longitude != null ? (
+          <a
+            href={`https://www.google.com/maps?q=${shop.latitude},${shop.longitude}`}
+            target="_blank"
+            rel="noreferrer"
+            className="text-sm font-semibold text-brand-deep hover:underline">
+            Map pe dekhein ↗
+          </a>
+        ) : null}
       </header>
 
       {error ? <ErrorNote message={error} /> : null}
