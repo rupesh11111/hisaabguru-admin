@@ -15,6 +15,7 @@ import {
   Td,
   Th,
 } from '@/components/ui';
+import { WalletCard } from '@/components/wallet-card';
 import {
   adminApi,
   autopayApi,
@@ -227,6 +228,8 @@ export default function UserDetailPage() {
         }}
         onError={setError}
       />
+
+      <WalletCard userId={user.id} onError={setError} onNotice={setNotice} />
 
       <Card title={`Owned shops (${user.ownedShops.length})`}>
         {user.ownedShops.length === 0 ? (

@@ -371,3 +371,94 @@ export const autopayApi = {
       method: 'POST',
     }),
 };
+
+// ----- Referrals & wallet -----
+
+export type ReferralStatus = 'PENDING' | 'REWARDED' | 'REJECTED' | 'EXPIRED';
+
+export type AdminReferral = {
+  id: string;
+  code: string;
+  source: 'LINK' | 'MANUAL';
+  status: ReferralStatus;
+  activeDays: number;
+  claimedAt: string;
+  windowEndsAt: string;
+  rewardedAt: string | null;
+  /** False when the referrer had reached the earning cap. */
+  referrerRewarded: boolean;
+  rejectReason: string | null;
+  referrer: { id: string; phoneNumber: string };
+  referee: { id: string; phoneNumber: string; createdAt: string };
+};
+
+export type UserWallet = {
+  /** Paise spendable now. */
+  balance: number;
+  lots: {
+    id: string;
+    amount: number;
+    remaining: number;
+    source: 'REFERRAL_REFERRER' | 'REFERRAL_REFEREE' | 'ADMIN_ADJUST';
+    expiresAt: string;
+    expired: boolean;
+    createdAt: string;
+  }[];
+  transactions: {
+    id: string;
+    type: 'EARN' | 'SPEND' | 'RESTORE' | 'EXPIRE' | 'ADJUST';
+    /** Signed paise. */
+    amount: number;
+    paymentId: string | null;
+    reason: string | null;
+    actorId: string | null;
+    createdAt: string;
+  }[];
+};
+
+/**
+ * Referral payouts are decided by the API's own job; the admin can only reject one
+ * that has not been paid yet, or correct a wallet with a signed adjustment.
+ */
+export const referralsApi = {
+  list: (status?: ReferralStatus) =>
+    request<AdminReferral[]>('/admin/referrals', { query: { status } }),
+  reject: (id: string, reason: string) =>
+    request<{ rejected: true }>(`/admin/referrals/${id}/reject`, {
+      method: 'POST',
+      body: { reason },
+    }),
+  wallet: (userId: string) => request<UserWallet>(`/admin/users/${userId}/wallet`),
+  /** `amount` is signed paise: positive adds credit, negative deducts it. */
+  adjust: (userId: string, amount: number, reason: string) =>
+    request<UserWallet>(`/admin/users/${userId}/wallet/adjust`, {
+      method: 'POST',
+      body: { amount, reason },
+    }),
+};
+
+// ----- App releases -----
+
+export type AppReleasePlatform = 'android' | 'ios';
+
+export type AppRelease = {
+  platform: AppReleasePlatform;
+  /** Older installs get an "update available" prompt they can postpone. */
+  latestVersion: string;
+  /** Older installs are blocked until they update. */
+  minVersion: string;
+  storeUrl: string | null;
+  updatedAt: string;
+};
+
+export const appReleaseApi = {
+  list: () => request<AppRelease[]>('/admin/app-releases'),
+  set: (
+    platform: AppReleasePlatform,
+    input: { latestVersion: string; minVersion: string; storeUrl: string | null },
+  ) =>
+    request<AppRelease>(`/admin/app-releases/${platform}`, {
+      method: 'PUT',
+      body: input,
+    }),
+};
