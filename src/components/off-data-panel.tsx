@@ -104,7 +104,7 @@ export function OffDataPanel({
   const fetchRecord = async () => {
     const code = barcodes[0];
     if (!code) {
-      setMessage('Pehle ek barcode add karein.');
+      setMessage('Add a barcode first.');
       return;
     }
     setBusy(true);
@@ -112,16 +112,16 @@ export function OffDataPanel({
     try {
       const record = await fetchRawBarcodeRecord(code);
       if (!record) {
-        setMessage(`${code}: Open*Facts me koi record nahi mila.`);
+        setMessage(`${code}: no record found in Open*Facts.`);
         return;
       }
       setSource(record.source);
       onChange(record.data);
       setMessage(
-        `${record.source} database se ${Object.keys(record.data).length} fields aaye — Save karna na bhoolein.`,
+        `Got ${Object.keys(record.data).length} fields from the ${record.source} database. Remember to save.`,
       );
     } catch (err) {
-      setMessage(err instanceof BarcodeLookupError ? err.message : 'Fetch fail');
+      setMessage(err instanceof BarcodeLookupError ? err.message : 'Fetch failed');
     } finally {
       setBusy(false);
     }
@@ -133,7 +133,7 @@ export function OffDataPanel({
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     } catch {
-      setMessage('Clipboard access nahi mila — JSON manually select karein.');
+      setMessage('No clipboard access. Select the JSON manually.');
     }
   };
 
@@ -166,11 +166,11 @@ export function OffDataPanel({
       subtitle={
         product
           ? `${fieldCount} fields cached${source ? ` · ${source}` : ''}`
-          : 'Barcode ka poora upstream record — images, nutrition, sab kuch.'
+          : 'The full upstream record for the barcode: images, nutrition, everything.'
       }
       actions={
         <Button variant="secondary" onClick={() => void fetchRecord()} loading={busy}>
-          {product ? 'Dobara laayein' : 'Fetch karein'}
+          {product ? 'Fetch again' : 'Fetch'}
         </Button>
       }>
       {message ? (
@@ -181,11 +181,11 @@ export function OffDataPanel({
 
       {!product ? (
         <EmptyState
-          title="Koi cached data nahi"
+          title="No cached data"
           description={
             barcodes.length === 0
-              ? 'Pehle upar barcode add karein, phir yahan se Open*Facts ka poora record laayein.'
-              : `${barcodes[0]} ka poora record laane ke liye "Fetch karein" dabaayein.`
+              ? 'Add a barcode above first, then fetch the full Open*Facts record here.'
+              : `Press "Fetch" to load the full record for ${barcodes[0]}.`
           }
         />
       ) : (
@@ -268,7 +268,7 @@ export function OffDataPanel({
               <SectionLabel>Raw JSON</SectionLabel>
               <span className="flex gap-2">
                 <Button variant="ghost" onClick={() => setShowRaw((v) => !v)}>
-                  {showRaw ? 'Chhupaayein' : 'Dikhaayein'}
+                  {showRaw ? 'Hide' : 'Show'}
                 </Button>
                 <Button variant="ghost" onClick={() => void copyRaw()}>
                   {copied ? 'Copied' : 'Copy'}
@@ -280,7 +280,7 @@ export function OffDataPanel({
             </div>
             <p className="mb-2 text-xs text-muted">
               <Badge label={`${(rawText.length / 1024).toFixed(1)} KB`} tone="neutral" />{' '}
-              Upar ke sections sirf convenience hain — asli record yahi hai.
+              The sections above are only a convenience; this is the actual record.
             </p>
             {showRaw ? (
               <pre className="max-h-96 overflow-auto rounded-lg border border-line bg-ground p-3 font-mono text-[11px] leading-relaxed text-ink">

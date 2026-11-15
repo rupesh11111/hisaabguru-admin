@@ -72,12 +72,12 @@ export default function CatalogOptionsPage() {
         <div>
           <h1 className="text-2xl font-black text-ink">Categories &amp; Units</h1>
           <p className="text-sm text-muted">
-            Product forms inhi lists se pick karte hain. Archive karne par option sirf
-            picker se hatta hai, items par value bani rehti hai.
+            Product forms pick from these lists. Archiving an option only removes it from
+            the picker; items keep their value.
           </p>
         </div>
         <Button variant="secondary" onClick={() => setShowArchived((v) => !v)}>
-          {showArchived ? 'Active dikhaayein' : 'Archived bhi dikhaayein'}
+          {showArchived ? 'Show active only' : 'Show archived too'}
         </Button>
       </header>
 
@@ -127,7 +127,7 @@ function OptionsPanel({
       setOptions(await catalogOptionsApi.list(kind, showArchived));
       setError(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Options load fail');
+      setError(err instanceof Error ? err.message : 'Could not load options');
     } finally {
       setLoading(false);
     }
@@ -148,7 +148,7 @@ function OptionsPanel({
   const save = async () => {
     if (!editing) return;
     if (!sortOrderValid(draft)) {
-      setError('Sort order sirf number ho sakta hai');
+      setError('Sort order must be a number');
       return;
     }
     setSaving(true);
@@ -158,7 +158,7 @@ function OptionsPanel({
       setEditing(null);
       await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Option save fail');
+      setError(err instanceof Error ? err.message : 'Could not save the option');
     } finally {
       setSaving(false);
     }
@@ -168,7 +168,7 @@ function OptionsPanel({
     const value = newValue.trim();
     if (!value || !labelsFilled(newDraft)) return;
     if (!sortOrderValid(newDraft)) {
-      setError('Sort order sirf number ho sakta hai');
+      setError('Sort order must be a number');
       return;
     }
     setSaving(true);
@@ -183,10 +183,10 @@ function OptionsPanel({
       // An archived row still owns its value, and it is hidden from the default list.
       setError(
         err instanceof ApiError && err.statusCode === 409
-          ? `"${value}" pehle se hai. List me nahi dikh rahi to archived hogi — wahan se Restore karein.`
+          ? `"${value}" already exists. If it is not in the list, it is archived — restore it from there.`
           : err instanceof Error
             ? err.message
-            : 'Option create fail',
+            : 'Could not create the option',
       );
     } finally {
       setSaving(false);
@@ -201,7 +201,7 @@ function OptionsPanel({
       await catalogOptionsApi.archive(archiveTarget.id);
       await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Archive fail');
+      setError(err instanceof Error ? err.message : 'Archive failed');
     } finally {
       setArchiving(false);
       setArchiveTarget(null);
@@ -214,12 +214,12 @@ function OptionsPanel({
       await catalogOptionsApi.restore(o.id);
       await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Restore fail');
+      setError(err instanceof Error ? err.message : 'Restore failed');
     }
   };
 
   const noun = isCategory ? 'category' : 'unit';
-  const newLabel = isCategory ? 'Nayi category' : 'Naya unit';
+  const newLabel = isCategory ? 'New category' : 'New unit';
 
   return (
     <>
@@ -243,7 +243,7 @@ function OptionsPanel({
                 value={newValue}
                 onChange={(e) => setNewValue(e.target.value)}
                 placeholder={isCategory ? 'Biscuits' : 'packet'}
-                hint="Yahi value items par store hoti hai. Baad me badli nahi ja sakti."
+                hint="This value is stored on items. It cannot be changed later."
               />
             </div>
             <LabelFields
@@ -268,8 +268,8 @@ function OptionsPanel({
           }>
           {options.length === 0 ? (
             <EmptyState
-              title={`Koi ${noun} nahi`}
-              description="Naya option add karein, ya archived bhi dikhaayein."
+              title={`No ${isCategory ? 'categories' : 'units'}`}
+              description="Add a new option, or show archived ones too."
             />
           ) : (
             <Table>
@@ -361,7 +361,7 @@ function OptionsPanel({
                 value={editing.value}
                 readOnly
                 className="cursor-not-allowed opacity-60"
-                hint="Value badli nahi ja sakti — yeh items par store hoti hai. Sirf labels badalte hain."
+                hint="The value cannot be changed — it is stored on items. Only the labels can change."
               />
             </div>
             <LabelFields
@@ -374,8 +374,8 @@ function OptionsPanel({
 
       <ConfirmDialog
         open={archiveTarget !== null}
-        title={`${isCategory ? 'Category' : 'Unit'} archive karein?`}
-        message={`"${archiveTarget?.value ?? ''}" sirf picker se hategi. Existing items ki value waisi hi rahegi — ${archiveTarget?.usage.inventory ?? 0} inventory rows aur ${archiveTarget?.usage.products ?? 0} products par koi asar nahi.`}
+        title={`Archive this ${noun}?`}
+        message={`"${archiveTarget?.value ?? ''}" will only be removed from the picker. Existing items keep their value — ${archiveTarget?.usage.inventory ?? 0} inventory rows and ${archiveTarget?.usage.products ?? 0} products are not affected.`}
         confirmLabel="Archive"
         loading={archiving}
         onConfirm={() => void archive()}
@@ -413,7 +413,7 @@ function LabelFields({
         label="Sort order"
         value={draft.sortOrder}
         inputMode="numeric"
-        hint="Chhota number picker me upar."
+        hint="Lower numbers appear higher in the picker."
         onChange={(e) => onChange({ sortOrder: e.target.value })}
       />
     </>

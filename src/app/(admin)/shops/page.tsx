@@ -27,7 +27,7 @@ export default function ShopsPage() {
       .listShops()
       .then(setShops)
       .catch((err: unknown) =>
-        setError(err instanceof Error ? err.message : 'Shops load fail'),
+        setError(err instanceof Error ? err.message : 'Could not load shops'),
       )
       .finally(() => setLoading(false));
   }, []);
@@ -59,7 +59,7 @@ export default function ShopsPage() {
           label="Search"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Shop name, city, owner ya phone…"
+          placeholder="Shop name, city, owner or phone…"
         />
       </Card>
 
@@ -69,7 +69,7 @@ export default function ShopsPage() {
             <Spinner size={26} />
           </div>
         ) : filtered.length === 0 ? (
-          <EmptyState title="Koi shop nahi mili" />
+          <EmptyState title="No shops found" />
         ) : (
           <Table>
             <thead>

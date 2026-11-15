@@ -66,7 +66,7 @@ export default function PlansPage() {
       setPlans(await plansApi.list(showArchived));
       setError(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Plans load fail');
+      setError(err instanceof Error ? err.message : 'Could not load plans');
     } finally {
       setLoading(false);
     }
@@ -107,7 +107,7 @@ export default function PlansPage() {
       setDraft(null);
       await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Plan save fail');
+      setError(err instanceof Error ? err.message : 'Could not save the plan');
     } finally {
       setSaving(false);
     }
@@ -120,7 +120,7 @@ export default function PlansPage() {
       else await plansApi.archive(p.id);
       await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Archive toggle fail');
+      setError(err instanceof Error ? err.message : 'Could not change archive status');
     }
   };
 
@@ -130,11 +130,11 @@ export default function PlansPage() {
         <div>
           <h1 className="text-2xl font-black text-ink">Subscription plans</h1>
           <p className="text-sm text-muted">
-            Limits aur pricing yahin se badalti hai — app restart ki zaroorat nahi.
+            Limits and pricing are changed here — no app restart needed.
           </p>
         </div>
         <Button variant="secondary" onClick={() => setShowArchived((v) => !v)}>
-          {showArchived ? 'Active dikhaayein' : 'Archived bhi dikhaayein'}
+          {showArchived ? 'Show active only' : 'Show archived too'}
         </Button>
       </header>
 
@@ -209,7 +209,7 @@ export default function PlansPage() {
       {draft && editingId ? (
         <Card
           title="Edit plan"
-          subtitle="Plan key badli nahi ja sakti — usse existing subscriptions bandhi hain."
+          subtitle="The plan key cannot be changed — existing subscriptions are tied to it."
           actions={
             <>
               <Button
@@ -248,14 +248,14 @@ export default function PlansPage() {
               label="Price monthly (₹)"
               value={draft.priceMonthly}
               inputMode="decimal"
-              hint="Khaali chhodein to 'Custom / contact us'."
+              hint="Leave blank for 'Custom / contact us'."
               onChange={(e) => setDraft({ ...draft, priceMonthly: e.target.value })}
             />
             <Input
               label="Price yearly (₹)"
               value={draft.priceYearly}
               inputMode="decimal"
-              hint="Khaali chhodein to 'Custom / contact us'."
+              hint="Leave blank for 'Custom / contact us'."
               onChange={(e) => setDraft({ ...draft, priceYearly: e.target.value })}
             />
             <Input

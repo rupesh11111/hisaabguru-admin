@@ -100,9 +100,11 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   // A FormData body must not get a Content-Type: the browser writes one that carries
   // the multipart boundary, and without that boundary the server cannot parse the body.
   const multipart = body instanceof FormData;
+  // The admin panel is in English. The API translates an error only on an exact
+  // language match, and a browser's own `en-US,en;q=0.9` is not one, so ask for `en`.
   const headers: Record<string, string> = multipart
-    ? {}
-    : { 'Content-Type': 'application/json' };
+    ? { 'Accept-Language': 'en' }
+    : { 'Content-Type': 'application/json', 'Accept-Language': 'en' };
   if (!skipAuth) {
     const token = getToken();
     if (token) headers.Authorization = `Bearer ${token}`;

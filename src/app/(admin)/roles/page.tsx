@@ -44,7 +44,7 @@ export default function RolesPage() {
       setCatalog(c);
       setError(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Roles load fail');
+      setError(err instanceof Error ? err.message : 'Could not load roles');
     } finally {
       setLoading(false);
     }
@@ -72,7 +72,7 @@ export default function RolesPage() {
       await load();
     } catch (err) {
       // The API refuses to let you grant a permission you don't hold yourself.
-      setError(err instanceof Error ? err.message : 'Permissions save fail');
+      setError(err instanceof Error ? err.message : 'Could not save permissions');
     } finally {
       setSaving(false);
     }
@@ -92,7 +92,7 @@ export default function RolesPage() {
       setNewLabel('');
       await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Role create fail');
+      setError(err instanceof Error ? err.message : 'Could not create the role');
     } finally {
       setSaving(false);
     }
@@ -106,7 +106,7 @@ export default function RolesPage() {
       setDeleteTarget(null);
       await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Role delete fail');
+      setError(err instanceof Error ? err.message : 'Could not delete the role');
     } finally {
       setDeleting(false);
     }
@@ -126,11 +126,11 @@ export default function RolesPage() {
         <div>
           <h1 className="text-2xl font-black text-ink">Roles</h1>
           <p className="text-sm text-muted">
-            Role → permissions mapping. System roles rename ho sakte hain, delete nahi.
+            Role → permissions mapping. System roles can be renamed but not deleted.
           </p>
         </div>
         <Button onClick={() => setCreating((v) => !v)}>
-          {creating ? 'Cancel' : 'Naya role'}
+          {creating ? 'Cancel' : 'New role'}
         </Button>
       </header>
 
@@ -138,7 +138,7 @@ export default function RolesPage() {
 
       {creating ? (
         <Card
-          title="Naya role"
+          title="New role"
           actions={
             <Button
               onClick={() => void createRole()}
@@ -153,7 +153,7 @@ export default function RolesPage() {
               value={newKey}
               onChange={(e) => setNewKey(e.target.value)}
               placeholder="STOCK_MANAGER"
-              hint="Uppercase, underscore separated. Baad me badla nahi ja sakta."
+              hint="Uppercase, underscore separated. Cannot be changed later."
             />
             <Input
               label="Label"
@@ -245,7 +245,7 @@ export default function RolesPage() {
                           return next;
                         })
                       }>
-                      {allOn ? 'Sab hataayein' : 'Sab chunein'}
+                      {allOn ? 'Clear all' : 'Select all'}
                     </button>
                   </div>
                   <div className="grid gap-2 sm:grid-cols-2">
@@ -286,8 +286,8 @@ export default function RolesPage() {
 
       <ConfirmDialog
         open={deleteTarget !== null}
-        title="Role delete karein?"
-        message={`"${deleteTarget?.label ?? ''}" delete ho jayega. Jin users/memberships pe yeh role laga hai unhe pehle badalna hoga.`}
+        title="Delete this role?"
+        message={`"${deleteTarget?.label ?? ''}" will be deleted. Users and memberships that have this role must be reassigned first.`}
         loading={deleting}
         onConfirm={() => void removeRole()}
         onCancel={() => setDeleteTarget(null)}

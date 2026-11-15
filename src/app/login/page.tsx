@@ -33,7 +33,7 @@ export default function LoginPage() {
       setDebugCode(res.debugCode ?? null);
       setStep('code');
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'OTP bhejne me problem hui');
+      setError(err instanceof ApiError ? err.message : 'Could not send the OTP');
     } finally {
       setBusy(false);
     }
@@ -51,12 +51,12 @@ export default function LoginPage() {
       const me = await authApi.me();
       if (!hasAdminAccess(me)) {
         setToken(null);
-        setError('Is number ke paas admin access nahi hai');
+        setError('This number does not have admin access');
         return;
       }
       router.replace('/');
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'OTP verify nahi hua');
+      setError(err instanceof ApiError ? err.message : 'Could not verify the OTP');
     } finally {
       setBusy(false);
     }
@@ -68,7 +68,7 @@ export default function LoginPage() {
         <div className="mb-6 text-center">
           <h1 className="text-2xl font-black text-ink">hisaabGuru Admin</h1>
           <p className="mt-1 text-sm text-muted">
-            Catalog, shops, users aur plans manage karein.
+            Manage the catalog, shops, users and plans.
           </p>
         </div>
 
@@ -86,11 +86,11 @@ export default function LoginPage() {
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' && phone.trim()) void sendOtp();
                   }}
-                  hint="Wahi number jispe admin access hai."
+                  hint="The number that has admin access."
                 />
                 {error ? <ErrorNote message={error} /> : null}
                 <Button onClick={() => void sendOtp()} loading={busy} disabled={!phone.trim()}>
-                  OTP bhejein
+                  Send OTP
                 </Button>
               </>
             ) : (
@@ -105,11 +105,11 @@ export default function LoginPage() {
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' && code.trim()) void verify();
                   }}
-                  hint={debugCode ? `Dev mode code: ${debugCode}` : `${phone} pe bheja gaya`}
+                  hint={debugCode ? `Dev mode code: ${debugCode}` : `Sent to ${phone}`}
                 />
                 {error ? <ErrorNote message={error} /> : null}
                 <Button onClick={() => void verify()} loading={busy} disabled={!code.trim()}>
-                  Verify aur login
+                  Verify and sign in
                 </Button>
                 <Button
                   variant="ghost"
@@ -118,7 +118,7 @@ export default function LoginPage() {
                     setCode('');
                     setError(null);
                   }}>
-                  Number badlein
+                  Change number
                 </Button>
               </>
             )}

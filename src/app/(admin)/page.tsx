@@ -16,7 +16,7 @@ export default function OverviewPage() {
       .stats()
       .then(setStats)
       .catch((err: unknown) =>
-        setError(err instanceof Error ? err.message : 'Stats load fail'),
+        setError(err instanceof Error ? err.message : 'Could not load stats'),
       );
   }, []);
 
@@ -65,7 +65,7 @@ export default function OverviewPage() {
 }
 
 function BreakdownList({ entries }: { entries: Array<[string, number | undefined]> }) {
-  if (entries.length === 0) return <p className="text-sm text-muted">Koi data nahi.</p>;
+  if (entries.length === 0) return <p className="text-sm text-muted">No data.</p>;
   return (
     <ul className="flex flex-col gap-2">
       {entries.map(([key, count]) => (

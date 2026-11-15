@@ -45,7 +45,7 @@ export default function ReferralsPage() {
         setError(null);
       })
       .catch((err: unknown) =>
-        setError(err instanceof Error ? err.message : 'Referrals load fail'),
+        setError(err instanceof Error ? err.message : 'Could not load referrals'),
       )
       .finally(() => setLoading(false));
   }, [filter]);
@@ -61,7 +61,7 @@ export default function ReferralsPage() {
       setReason('');
       load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Reject fail');
+      setError(err instanceof Error ? err.message : 'Reject failed');
     } finally {
       setSaving(false);
     }
@@ -72,9 +72,9 @@ export default function ReferralsPage() {
       <header>
         <h1 className="text-2xl font-black text-ink">Referrals</h1>
         <p className="text-sm text-muted">
-          Inaam API ka job khud deta hai (7 active din, 14 din ke andar). Yahaan se sirf
-          PENDING referral reject ho sakta hai, jaise fake shop. Diya hua inaam wapas lena ho
-          to user ke page par wallet adjust karein.
+          Rewards are granted automatically by an API job (7 active days within 14 days). From
+          here you can only reject a PENDING referral, e.g. a fake shop. To take back a reward
+          already given, adjust the wallet on the user&apos;s page.
         </p>
       </header>
 
@@ -101,7 +101,7 @@ export default function ReferralsPage() {
             <Spinner size={26} />
           </div>
         ) : rows.length === 0 ? (
-          <EmptyState title="Koi referral nahi" />
+          <EmptyState title="No referrals" />
         ) : (
           <Table>
             <thead>
@@ -168,8 +168,8 @@ export default function ReferralsPage() {
 
       <ConfirmDialog
         open={rejecting !== null}
-        title="Referral reject karein?"
-        message={`${rejecting?.referee.phoneNumber ?? ''} ka referral reject hoga. Kisi ko inaam nahi milega, aur yeh wapas nahi hota.`}
+        title="Reject this referral?"
+        message={`The referral for ${rejecting?.referee.phoneNumber ?? ''} will be rejected. No one gets a reward, and this cannot be undone.`}
         confirmLabel="Reject"
         loading={saving}
         onConfirm={() => {
@@ -180,10 +180,10 @@ export default function ReferralsPage() {
           setReason('');
         }}>
         <Input
-          label="Reason (zaroori)"
+          label="Reason (required)"
           value={reason}
           onChange={(e) => setReason(e.target.value)}
-          placeholder="Jaise: same owner, fake shop"
+          placeholder="E.g. same owner, fake shop"
         />
       </ConfirmDialog>
     </div>

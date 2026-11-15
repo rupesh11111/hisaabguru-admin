@@ -28,7 +28,7 @@ export default function UsersPage() {
       .listUsers()
       .then(setUsers)
       .catch((err: unknown) =>
-        setError(err instanceof Error ? err.message : 'Users load fail'),
+        setError(err instanceof Error ? err.message : 'Could not load users'),
       )
       .finally(() => setLoading(false));
   }, []);
@@ -58,7 +58,7 @@ export default function UsersPage() {
           label="Search"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Phone number ya role…"
+          placeholder="Phone number or role…"
         />
       </Card>
 
@@ -68,7 +68,7 @@ export default function UsersPage() {
             <Spinner size={26} />
           </div>
         ) : filtered.length === 0 ? (
-          <EmptyState title="Koi user nahi mila" />
+          <EmptyState title="No users found" />
         ) : (
           <Table>
             <thead>

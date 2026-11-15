@@ -65,7 +65,7 @@ export default function ProductsPage() {
       })
       .catch((err: unknown) => {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : 'Products load fail');
+          setError(err instanceof Error ? err.message : 'Could not load products');
         }
       })
       .finally(() => {
@@ -88,7 +88,7 @@ export default function ProductsPage() {
       });
       setTotal(page.total);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Aur products load nahi hue');
+      setError(err instanceof Error ? err.message : 'Could not load more products');
     } finally {
       setLoadingMore(false);
     }
@@ -100,7 +100,7 @@ export default function ProductsPage() {
         <div>
           <h1 className="text-2xl font-black text-ink">Products catalog</h1>
           <p className="text-sm text-muted">
-            Global catalog — sab shops yeh dekhti hain barcode scan pe.
+            Global catalog: every shop sees this when it scans a barcode.
           </p>
         </div>
         <div className="flex gap-2">
@@ -108,7 +108,7 @@ export default function ProductsPage() {
             <Button variant="secondary">Bulk import</Button>
           </Link>
           <Link href="/products/new">
-            <Button>Naya product</Button>
+            <Button>New product</Button>
           </Link>
         </div>
       </header>
@@ -120,25 +120,25 @@ export default function ProductsPage() {
           label="Search"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Product name, category, ya barcode…"
-          hint="Search server pe chalta hai — poora catalog cover hota hai, sirf loaded rows nahi."
+          placeholder="Product name, category or barcode…"
+          hint="Search runs on the server, so it covers the whole catalog, not just the loaded rows."
         />
       </Card>
 
       <Card
         title={loading ? 'Loading…' : `${items.length} of ${total}`}
-        subtitle="Row pe click karke edit ya delete karein. Sirf Verified rows doosri shops ko prefill me milti hain.">
+        subtitle="Click a row to edit or delete it. Only Verified rows are prefilled for other shops.">
         {loading ? (
           <div className="flex justify-center py-14">
             <Spinner size={26} />
           </div>
         ) : items.length === 0 ? (
           <EmptyState
-            title="Koi product nahi mila"
+            title="No products found"
             description={
               appliedSearch
-                ? 'Search clear karein ya naya product banayein.'
-                : 'Catalog khaali hai — naya product banayein ya bulk import karein.'
+                ? 'Clear the search or create a new product.'
+                : 'The catalog is empty. Create a new product or use bulk import.'
             }
             action={
               <Link href="/products/import">
@@ -221,10 +221,10 @@ export default function ProductsPage() {
             <div className="flex justify-center pt-5">
               {items.length < total ? (
                 <Button variant="secondary" onClick={() => void loadMore()} loading={loadingMore}>
-                  Aur {Math.min(PAGE_SIZE, total - items.length)} load karein
+                  Load {Math.min(PAGE_SIZE, total - items.length)} more
                 </Button>
               ) : (
-                <p className="text-xs text-muted">Poora catalog dikh gaya</p>
+                <p className="text-xs text-muted">Showing the whole catalog</p>
               )}
             </div>
           </>

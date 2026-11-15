@@ -41,7 +41,7 @@ function rowProblem(r: ParsedRow): string | undefined {
     !r.category.trim() && 'category',
     !r.unit.trim() && 'unit',
   ].filter(Boolean);
-  return missing.length > 0 ? `${missing.join(', ')} khaali hai` : undefined;
+  return missing.length > 0 ? `${missing.join(', ')} empty` : undefined;
 }
 
 /** What the server turned a row's text into, so a mapped row isn't mistaken for as-typed. */
@@ -129,7 +129,7 @@ function parseCsv(text: string): ParsedRow[] {
         error = err instanceof BarcodeLookupError ? err.message : `Invalid barcode ${raw}`;
       }
     }
-    if (!error && !at(cols.name)) error = 'name column khaali hai';
+    if (!error && !at(cols.name)) error = 'name column is empty';
 
     return {
       line: lineNo,
@@ -174,7 +174,7 @@ export default function ProductImportPage() {
       return;
     }
     if (scanRows.some((r) => r.barcodes?.includes(code))) {
-      setScanError('Yeh barcode queue me pehle se hai');
+      setScanError('This barcode is already in the queue');
       return;
     }
 
@@ -192,7 +192,7 @@ export default function ProductImportPage() {
           unit: 'piece',
           packSize: found?.quantity ?? '',
           barcodes: [code],
-          error: found ? undefined : 'OpenFoodFacts me nahi mila — details bharein',
+          error: found ? undefined : 'Not found in OpenFoodFacts. Fill in the details',
         },
       ]);
     } catch (err) {
@@ -206,7 +206,7 @@ export default function ProductImportPage() {
           unit: 'piece',
           packSize: '',
           barcodes: [code],
-          error: err instanceof BarcodeLookupError ? err.message : 'Lookup fail',
+          error: err instanceof BarcodeLookupError ? err.message : 'Lookup failed',
         },
       ]);
     } finally {
@@ -244,7 +244,7 @@ export default function ProductImportPage() {
       }));
       setResult(await adminApi.bulkImportProducts(payload));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Import fail');
+      setError(err instanceof Error ? err.message : 'Import failed');
     } finally {
       setBusy(false);
     }
@@ -258,8 +258,8 @@ export default function ProductImportPage() {
         </Link>
         <h1 className="mt-1 text-2xl font-black text-ink">Bulk import</h1>
         <p className="text-sm text-muted">
-          Ek saath kai products catalog me daalein. Jis barcode ka product pehle se hai,
-          wo update ho jayega — dobara import karna safe hai.
+          Add many products to the catalog at once. A product whose barcode already
+          exists is updated, so re-importing is safe.
         </p>
       </header>
 
@@ -280,11 +280,11 @@ export default function ProductImportPage() {
 
       {mode === 'csv' ? (
         <Card
-          title="CSV paste karein"
-          subtitle="Columns: name, category, unit, barcodes, pack size. Header optional. Ek se zyada barcode ho to | ya space se alag karein. Jo category/unit list me nahi, unhe server map karta hai — neeche result me dikhega."
+          title="Paste CSV"
+          subtitle="Columns: name, category, unit, barcodes, pack size. Header optional. Separate multiple barcodes with | or a space. The server maps any category/unit not in the list, and the result below shows it."
           actions={
             <Button variant="secondary" onClick={() => setCsv(SAMPLE)}>
-              Sample bharein
+              Fill sample
             </Button>
           }>
           <Textarea
@@ -297,11 +297,11 @@ export default function ProductImportPage() {
       ) : (
         <Card
           title="Scan queue"
-          subtitle="USB scanner se ek ke baad ek scan karte jaayein — har code ka naam OpenFoodFacts se apne aap bhar jayega.">
+          subtitle="Scan items one after another with the USB scanner. Each code's name is filled in from OpenFoodFacts automatically.">
           <div className="flex items-end gap-2">
             <div className="flex-1">
               <Input
-                label="Scan ya barcode type karein"
+                label="Scan or type a barcode"
                 value={scanDraft}
                 onChange={(e) => {
                   setScanDraft(e.target.value);
@@ -318,7 +318,7 @@ export default function ProductImportPage() {
                 autoComplete="off"
                 autoFocus
                 error={scanError ?? undefined}
-                hint="Scanner Enter bhejta hai, isliye scan ke baad row apne aap jud jayegi."
+                hint="The scanner sends Enter, so each scan adds a row automatically."
               />
             </div>
             <Button
@@ -334,19 +334,19 @@ export default function ProductImportPage() {
 
       {rows.length > 0 ? (
         <Card
-          title={`${rows.length} rows — ${validRows.length} import hone laayak`}
+          title={`${rows.length} rows, ${validRows.length} ready to import`}
           subtitle={`${
             blankRows > 0
-              ? `${blankRows} rows me name, category ya unit khaali hai — bheji nahi jayengi. `
+              ? `${blankRows} rows have an empty name, category or unit and will not be sent. `
               : ''
           }${
             mode === 'scan'
-              ? 'Khaali fields bhar dein; jo rows adhoori hain woh skip ho jayengi.'
-              : 'Laal rows skip ho jayengi. CSV theek karke dobara paste karein.'
+              ? 'Fill in the empty fields; incomplete rows will be skipped.'
+              : 'Red rows will be skipped. Fix the CSV and paste it again.'
           }`}
           actions={
             <Button onClick={() => void runImport()} loading={busy} disabled={validRows.length === 0}>
-              {validRows.length} products import karein
+              Import {validRows.length} products
             </Button>
           }>
           <Table>
@@ -434,7 +434,7 @@ export default function ProductImportPage() {
             <StatTile label="Failed" value={result.summary.failed} />
           </div>
 
-          <Card title="Import result" subtitle="Har row ka apna outcome.">
+          <Card title="Import result" subtitle="The outcome of each row.">
             <Table>
               <thead>
                 <tr>

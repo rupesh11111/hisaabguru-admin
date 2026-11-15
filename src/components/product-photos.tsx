@@ -53,12 +53,12 @@ export function ProductPhotos({
 
     // `accept` only filters the picker; "All files" gets past it.
     if (!ACCEPTED_TYPES.includes(file.type)) {
-      setError('Sirf JPEG, PNG ya WebP photo chalegi.');
+      setError('Only JPEG, PNG or WebP photos are allowed.');
       return;
     }
     if (file.size > MAX_BYTES) {
       setError(
-        `Photo ${(file.size / (1024 * 1024)).toFixed(1)} MB ki hai — 5 MB tak hi chalegi.`,
+        `Photo is ${(file.size / (1024 * 1024)).toFixed(1)} MB; the limit is 5 MB.`,
       );
       return;
     }
@@ -68,7 +68,7 @@ export function ProductPhotos({
     try {
       onChange(await adminApi.addProductPhoto(product.id, file));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Upload fail');
+      setError(err instanceof Error ? err.message : 'Upload failed');
     } finally {
       setUploading(false);
     }
@@ -81,7 +81,7 @@ export function ProductPhotos({
     try {
       onChange(await adminApi.removeProductPhoto(product.id, confirmUrl));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Remove fail');
+      setError(err instanceof Error ? err.message : 'Remove failed');
     } finally {
       setRemoving(false);
       setConfirmUrl(null);
@@ -91,14 +91,14 @@ export function ProductPhotos({
   return (
     <Card
       title={`Photos (${photos.length}/${MAX_PHOTOS})`}
-      subtitle="Yeh photos sab shops me dikhti hain. Pehli photo main photo hai."
+      subtitle="These photos are shown in every shop. The first photo is the main one."
       actions={
         <>
           <input
             ref={input}
             type="file"
             accept="image/jpeg,image/png,image/webp"
-            aria-label="Photo chunein"
+            aria-label="Choose photo"
             className="hidden"
             onChange={(e) => void upload(e)}
           />
@@ -107,7 +107,7 @@ export function ProductPhotos({
             onClick={() => input.current?.click()}
             loading={uploading}
             disabled={busy || full}>
-            {uploading ? 'Upload ho raha hai…' : 'Add photo'}
+            {uploading ? 'Uploading…' : 'Add photo'}
           </Button>
         </>
       }>
@@ -115,7 +115,7 @@ export function ProductPhotos({
         {error ? <ErrorNote message={error} /> : null}
 
         {photos.length === 0 ? (
-          <p className="text-sm text-muted">Abhi koi photo nahi hai.</p>
+          <p className="text-sm text-muted">No photos yet.</p>
         ) : (
           <ul className="flex flex-wrap gap-3">
             {photos.map((url, i) => (
@@ -127,7 +127,7 @@ export function ProductPhotos({
                   variant="ghost"
                   onClick={() => setConfirmUrl(url)}
                   disabled={busy}
-                  aria-label={`Photo ${i + 1} remove karein`}>
+                  aria-label={`Remove photo ${i + 1}`}>
                   Remove
                 </Button>
               </li>
@@ -137,16 +137,16 @@ export function ProductPhotos({
 
         <p className="text-xs text-muted">
           {full
-            ? `${MAX_PHOTOS} photos poori ho gayi — nayi add karne se pehle koi ek remove karein.`
-            : 'JPEG, PNG ya WebP, 5 MB tak.'}
+            ? `${MAX_PHOTOS} photo limit reached. Remove one before adding another.`
+            : 'JPEG, PNG or WebP, up to 5 MB.'}
         </p>
       </div>
 
       <ConfirmDialog
         open={confirmUrl !== null}
-        title="Photo remove karein?"
-        message="Yeh photo sab shops se hat jayegi, sirf is screen se nahi."
-        confirmLabel="Haan, remove karein"
+        title="Remove photo?"
+        message="This photo will be removed from every shop, not just this screen."
+        confirmLabel="Yes, remove"
         loading={removing}
         onConfirm={() => void remove()}
         onCancel={() => setConfirmUrl(null)}>
@@ -175,7 +175,7 @@ function Photo({ url, alt }: { url: string; alt: string }) {
   if (failed) {
     return (
       <span className="flex size-full items-center justify-center bg-ground p-2 text-center text-xs text-muted">
-        Photo load nahi hui
+        Photo failed to load
       </span>
     );
   }

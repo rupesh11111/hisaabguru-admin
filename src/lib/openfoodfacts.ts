@@ -30,7 +30,7 @@ export type OpenFoodFactsProduct = {
   category?: string;
   quantity?: string;
   imageUrl?: string;
-  /** true jab naam OFF se nahi mila aur brand/quantity se banaya gaya hai — UI confirm karwa le. */
+  /** True when OFF had no name and it was built from brand/quantity; the UI should ask for confirmation. */
   nameIsGuessed: boolean;
   /** Which Open*Facts database answered. Useful for debugging coverage gaps. */
   source: DatabaseId;
@@ -180,19 +180,19 @@ export function assertScannableBarcode(input: string): string {
   // Scanners sometimes append whitespace or a trailing newline from keyboard-wedge mode.
   const code = input.trim().replace(/\s+/g, '');
   if (!code) {
-    throw new BarcodeLookupError('Barcode khaali hai', 'invalid-barcode');
+    throw new BarcodeLookupError('Barcode is empty', 'invalid-barcode');
   }
   if (!/^\d+$/.test(code)) {
-    throw new BarcodeLookupError('Barcode mein sirf digits hone chahiye', 'invalid-barcode');
+    throw new BarcodeLookupError('Barcode must contain digits only', 'invalid-barcode');
   }
   if (![8, 12, 13, 14].includes(code.length)) {
     throw new BarcodeLookupError(
-      `${code.length}-digit barcode retail GTIN nahi hai`,
+      `A ${code.length}-digit barcode is not a retail GTIN`,
       'invalid-barcode',
     );
   }
   if (!hasValidCheckDigit(code)) {
-    throw new BarcodeLookupError('Barcode check digit galat hai — dobara scan karein', 'invalid-barcode');
+    throw new BarcodeLookupError('Barcode check digit is wrong. Scan again', 'invalid-barcode');
   }
   return code;
 }
@@ -248,7 +248,7 @@ function sleep(ms: number, signal?: AbortSignal): Promise<void> {
     }, ms);
     const onAbort = () => {
       clearTimeout(timer);
-      reject(new BarcodeLookupError('Lookup cancel ho gaya', 'aborted'));
+      reject(new BarcodeLookupError('Lookup cancelled', 'aborted'));
     };
     if (signal?.aborted) return onAbort();
     signal?.addEventListener('abort', onAbort);
@@ -276,7 +276,7 @@ async function fetchWithTimeout(url: string, signal?: AbortSignal): Promise<Resp
 
   if (signal?.aborted) {
     clearTimeout(timer);
-    throw new BarcodeLookupError('Lookup cancel ho gaya', 'aborted');
+    throw new BarcodeLookupError('Lookup cancelled', 'aborted');
   }
   signal?.addEventListener('abort', onCallerAbort);
 
@@ -291,8 +291,8 @@ async function fetchWithTimeout(url: string, signal?: AbortSignal): Promise<Resp
   } catch (err) {
     // Both the timeout and the caller's cancel surface as the same AbortError.
     if (err instanceof Error && err.name === 'AbortError') {
-      if (signal?.aborted) throw new BarcodeLookupError('Lookup cancel ho gaya', 'aborted');
-      throw new BarcodeLookupError('OpenFoodFacts timeout — network slow hai', 'timeout');
+      if (signal?.aborted) throw new BarcodeLookupError('Lookup cancelled', 'aborted');
+      throw new BarcodeLookupError('OpenFoodFacts timed out. The network is slow', 'timeout');
     }
     throw new BarcodeLookupError(
       err instanceof Error ? `Network error: ${err.message}` : 'Network error',
@@ -345,7 +345,7 @@ async function queryDatabase(
       retryAfter = res.headers.get('Retry-After');
       lastError = new BarcodeLookupError(
         res.status === 429
-          ? 'OpenFoodFacts rate limit — thodi der baad try karein'
+          ? 'OpenFoodFacts rate limit. Try again in a little while'
           : `OpenFoodFacts server error (${res.status})`,
         res.status === 429 ? 'rate-limited' : 'server',
         res.status,
@@ -362,11 +362,11 @@ async function queryDatabase(
     } catch {
       // Captive-portal HTML or a truncated body — treat as a retryable server fault.
       retryAfter = null;
-      lastError = new BarcodeLookupError('OpenFoodFacts ne invalid JSON bheja', 'server');
+      lastError = new BarcodeLookupError('OpenFoodFacts sent invalid JSON', 'server');
     }
   }
 
-  throw lastError ?? new BarcodeLookupError('OpenFoodFacts lookup fail', 'network');
+  throw lastError ?? new BarcodeLookupError('OpenFoodFacts lookup failed', 'network');
 }
 
 // ---------------------------------------------------------------------------
@@ -423,7 +423,7 @@ function pickCategory(p: RawProduct): string | undefined {
   return parts.length > 0 ? parts[parts.length - 1] : undefined;
 }
 
-/** `quantity` blank ho toh product_quantity + unit se bana lo ("500" + "g" → "500 g"). */
+/** When `quantity` is blank, build it from product_quantity + unit ("500" + "g" → "500 g"). */
 function pickQuantity(p: RawProduct): string | undefined {
   const direct = clean(p.quantity) ?? clean(p.net_weight);
   if (direct) return direct;

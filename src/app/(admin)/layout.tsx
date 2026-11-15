@@ -48,10 +48,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   if (!hasAdminAccess(state.user)) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-4 p-6 text-center">
-        <h1 className="text-xl font-bold text-ink">Admin access nahi hai</h1>
+        <h1 className="text-xl font-bold text-ink">No admin access</h1>
         <p className="max-w-sm text-sm text-muted">
-          {state.user.phoneNumber} ke paas <code>admin:access</code> permission nahi hai.
-          Kisi SUPER_ADMIN se grant karwayein.
+          {state.user.phoneNumber} does not have the <code>admin:access</code> permission.
+          Ask a SUPER_ADMIN to grant it.
         </p>
         <Button variant="secondary" onClick={signOut}>
           Sign out

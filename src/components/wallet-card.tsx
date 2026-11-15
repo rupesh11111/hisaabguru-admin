@@ -32,7 +32,7 @@ export function WalletCard({
     referralsApi
       .wallet(userId)
       .then(setWallet)
-      .catch((err: unknown) => onError(err instanceof Error ? err.message : 'Wallet load fail'))
+      .catch((err: unknown) => onError(err instanceof Error ? err.message : 'Could not load the wallet'))
       .finally(() => setLoading(false));
   }, [userId, onError]);
 
@@ -47,11 +47,11 @@ export function WalletCard({
     setSaving(true);
     try {
       setWallet(await referralsApi.adjust(userId, paise, reason.trim()));
-      onNotice(`Wallet ${paise > 0 ? 'me jode' : 'se kaate'}: ${rupees(Math.abs(paise))}`);
+      onNotice(`${paise > 0 ? 'Added to' : 'Deducted from'} wallet: ${rupees(Math.abs(paise))}`);
       setAmount('');
       setReason('');
     } catch (err) {
-      onError(err instanceof Error ? err.message : 'Adjust fail');
+      onError(err instanceof Error ? err.message : 'Adjustment failed');
     } finally {
       setSaving(false);
     }
@@ -60,7 +60,7 @@ export function WalletCard({
   return (
     <Card
       title="Referral wallet"
-      subtitle="Plan kharidte waqt discount. Paisa nahi hai: refund ya cash-out nahi hota.">
+      subtitle="A discount applied when buying a plan. It is not money: no refunds or cash-out.">
       {loading ? (
         <div className="flex justify-center py-6">
           <Spinner />
@@ -73,17 +73,17 @@ export function WalletCard({
 
           <div className="grid gap-3 sm:grid-cols-[160px_1fr_auto] sm:items-end">
             <Input
-              label="Amount (₹, minus = kaatna)"
+              label="Amount (₹, negative = deduct)"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
-              placeholder="100 ya -50"
+              placeholder="100 or -50"
               inputMode="decimal"
             />
             <Input
               label="Reason"
               value={reason}
               onChange={(e) => setReason(e.target.value)}
-              placeholder="Jaise: fake referral ka inaam wapas"
+              placeholder="E.g. reversing a fake referral reward"
             />
             <Button onClick={() => void adjust()} loading={saving} disabled={!valid}>
               Adjust
@@ -91,7 +91,7 @@ export function WalletCard({
           </div>
 
           {wallet.transactions.length === 0 ? (
-            <p className="text-sm text-muted">Koi entry nahi.</p>
+            <p className="text-sm text-muted">No entries.</p>
           ) : (
             <Table>
               <thead>

@@ -37,7 +37,7 @@ export default function ShopDetailPage() {
       .getShop(id)
       .then(setShop)
       .catch((err: unknown) =>
-        setError(err instanceof Error ? err.message : 'Shop load fail'),
+        setError(err instanceof Error ? err.message : 'Could not load the shop'),
       )
       .finally(() => setLoading(false));
   }, [id]);
@@ -51,7 +51,7 @@ export default function ShopDetailPage() {
       await adminApi.deleteShop(id);
       router.replace('/shops');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Delete fail');
+      setError(err instanceof Error ? err.message : 'Delete failed');
       setDeleting(false);
       setConfirmDelete(false);
     }
@@ -64,7 +64,7 @@ export default function ShopDetailPage() {
       </div>
     );
   }
-  if (!shop) return <ErrorNote message={error ?? 'Shop nahi mili'} />;
+  if (!shop) return <ErrorNote message={error ?? 'Shop not found'} />;
 
   const address = [
     shop.addressLine,
@@ -92,7 +92,7 @@ export default function ShopDetailPage() {
             target="_blank"
             rel="noreferrer"
             className="text-sm font-semibold text-brand-deep hover:underline">
-            Map pe dekhein ↗
+            View on map ↗
           </a>
         ) : null}
       </header>
@@ -108,7 +108,7 @@ export default function ShopDetailPage() {
 
       <Card title={`Members (${shop.memberships.length})`}>
         {shop.memberships.length === 0 ? (
-          <p className="text-sm text-muted">Koi member nahi.</p>
+          <p className="text-sm text-muted">No members.</p>
         ) : (
           <Table>
             <thead>
@@ -153,22 +153,22 @@ export default function ShopDetailPage() {
 
       <Card
         title="Danger zone"
-        subtitle="Shop delete karne par uske bills, inventory aur customers bhi cascade me chale jayenge.">
+        subtitle="Deleting a shop also cascades to its bills, inventory and customers.">
         {isSuper ? (
           <Button variant="danger" onClick={() => setConfirmDelete(true)}>
             Delete shop
           </Button>
         ) : (
           <p className="text-sm text-muted">
-            Shop delete karne ke liye SUPER_ADMIN chahiye.
+            Only a SUPER_ADMIN can delete a shop.
           </p>
         )}
       </Card>
 
       <ConfirmDialog
         open={confirmDelete}
-        title="Shop delete karein?"
-        message={`"${shop.shopName}" aur uska saara data (${shop.counts.bills} bills, ${shop.counts.inventory} items) permanently delete ho jayega.`}
+        title="Delete this shop?"
+        message={`"${shop.shopName}" and all its data (${shop.counts.bills} bills, ${shop.counts.inventory} items) will be permanently deleted.`}
         loading={deleting}
         onConfirm={() => void remove()}
         onCancel={() => setConfirmDelete(false)}

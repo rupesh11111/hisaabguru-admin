@@ -72,7 +72,7 @@ function toLocalInputValue(iso: string | null | undefined): string {
 }
 
 /**
- * Shortcut presets land on 23:59 local, not on the current clock time — "+30 din"
+ * Shortcut presets land on 23:59 local, not on the current clock time — "+30 days"
  * should give the shopkeeper the whole 30th day, not cut them off mid-afternoon.
  */
 function endOfTodayPlusDays(days: number): string {
@@ -125,7 +125,7 @@ export default function UserDetailPage() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     load()
       .catch((err: unknown) =>
-        setError(err instanceof Error ? err.message : 'User load fail'),
+        setError(err instanceof Error ? err.message : 'Could not load the user'),
       )
       .finally(() => setLoading(false));
   }, [load]);
@@ -142,9 +142,9 @@ export default function UserDetailPage() {
     setNotice(null);
     try {
       setUser(await adminApi.changeUserRole(user.id, role));
-      setNotice(`Platform role ${role} kar diya — agla login se effect hoga.`);
+      setNotice(`Platform role set to ${role} — takes effect on next sign-in.`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Role change fail');
+      setError(err instanceof Error ? err.message : 'Could not change the role');
     } finally {
       setSavingRole(false);
     }
@@ -157,7 +157,7 @@ export default function UserDetailPage() {
       </div>
     );
   }
-  if (!user) return <ErrorNote message={error ?? 'User nahi mila'} />;
+  if (!user) return <ErrorNote message={error ?? 'User not found'} />;
 
   const membershipRoles = roles.filter(
     (r) => !PLATFORM_ROLE_KEYS.has(r.key) && r.key !== OWNER_ROLE_KEY,
@@ -173,7 +173,7 @@ export default function UserDetailPage() {
         <p className="text-sm text-muted">
           {subscription
             ? `${subscription.planLabel} · ${subscription.status}`
-            : 'Koi plan assign nahi'}
+            : 'No plan assigned'}
           {subscription?.expiresAt
             ? ` · expires ${formatWhen(subscription.expiresAt)}`
             : subscription
@@ -193,10 +193,10 @@ export default function UserDetailPage() {
         title="Platform role"
         subtitle={
           isSelf
-            ? 'Apna role khud badal nahi sakte — API bhi isko rokta hai.'
+            ? 'You cannot change your own role — the API blocks this too.'
             : isSuper
-              ? 'Promote / demote — agla login se effect hoga. SUPER_ADMIN yahaan se nahi diya ja sakta.'
-              : 'Read-only — role change ke liye SUPER_ADMIN chahiye.'
+              ? 'Promote / demote — takes effect on next sign-in. SUPER_ADMIN cannot be granted from here.'
+              : 'Read-only — changing the role requires a SUPER_ADMIN.'
         }>
         <div className="flex flex-wrap items-center gap-2">
           {GRANTABLE_ROLES.map((role) => (
@@ -210,7 +210,7 @@ export default function UserDetailPage() {
           ))}
           {user.platformRole === 'SUPER_ADMIN' ? (
             <span className="ml-1">
-              <Badge label="Abhi SUPER ADMIN hai" tone="danger" />
+              <Badge label="Currently SUPER ADMIN" tone="danger" />
             </span>
           ) : null}
         </div>
@@ -223,7 +223,7 @@ export default function UserDetailPage() {
         disabled={isSelf}
         onChanged={(next) => {
           setSubscription(next);
-          setNotice(`Plan ${next.planLabel} (${next.status}) kar diya.`);
+          setNotice(`Plan set to ${next.planLabel} (${next.status}).`);
           void subscriptionsApi.history(id).then(setHistory);
         }}
         onError={setError}
@@ -233,7 +233,7 @@ export default function UserDetailPage() {
 
       <Card title={`Owned shops (${user.ownedShops.length})`}>
         {user.ownedShops.length === 0 ? (
-          <p className="text-sm text-muted">Koi shop own nahi karte.</p>
+          <p className="text-sm text-muted">Does not own any shops.</p>
         ) : (
           <Table>
             <thead>
@@ -266,9 +266,9 @@ export default function UserDetailPage() {
 
       <Card
         title={`Memberships (${user.memberships.length})`}
-        subtitle="Shop ke andar ka role. OWNER ka role yahaan se nahi badal sakta — uske liye ownership transfer chahiye, jo abhi backend me bana nahi hai.">
+        subtitle="Role within each shop. The OWNER role cannot be changed here — that needs an ownership transfer, which the backend does not support yet.">
         {user.memberships.length === 0 ? (
-          <p className="text-sm text-muted">Kisi shop ke member nahi hain.</p>
+          <p className="text-sm text-muted">Not a member of any shop.</p>
         ) : (
           <Table>
             <thead>
@@ -318,9 +318,9 @@ export default function UserDetailPage() {
 
       <Card
         title="Plan history"
-        subtitle="Append-only audit log — har plan change yahaan record hota hai.">
+        subtitle="Append-only audit log — every plan change is recorded here.">
         {history.length === 0 ? (
-          <p className="text-sm text-muted">Abhi koi plan change nahi hua.</p>
+          <p className="text-sm text-muted">No plan changes yet.</p>
         ) : (
           <Table>
             <thead>
@@ -344,7 +344,7 @@ export default function UserDetailPage() {
                   </Td>
                   <Td className="tnum text-muted">
                     {formatWhen(h.startedAt)} →{' '}
-                    {h.endedAt ? formatWhen(h.endedAt) : 'abhi tak'}
+                    {h.endedAt ? formatWhen(h.endedAt) : 'now'}
                   </Td>
                   <Td className="tnum text-muted">{h.changedByPhone ?? 'system'}</Td>
                   <Td className="text-muted">{h.reason ?? '—'}</Td>
@@ -396,20 +396,20 @@ function SubscriptionCard({
   }, [userId]);
 
   const stopAutopay = async () => {
-    if (!window.confirm('Is user ka Autopay abhi band karein? Aage koi debit nahi hoga.')) {
+    if (!window.confirm('Stop Autopay for this user now? No further debits will be made.')) {
       return;
     }
     try {
       await autopayApi.cancel(userId);
       setAutopay(null);
     } catch (err) {
-      onError(err instanceof Error ? err.message : 'Autopay band nahi hua');
+      onError(err instanceof Error ? err.message : 'Could not stop Autopay');
     }
   };
 
   const save = async () => {
     if (!planKey) {
-      onError('Plan select karein');
+      onError('Select a plan');
       return;
     }
     setSaving(true);
@@ -425,7 +425,7 @@ function SubscriptionCard({
       );
       setReason('');
     } catch (err) {
-      onError(err instanceof Error ? err.message : 'Plan change fail');
+      onError(err instanceof Error ? err.message : 'Could not change the plan');
     } finally {
       setSaving(false);
     }
@@ -436,27 +436,27 @@ function SubscriptionCard({
       title="Subscription plan"
       subtitle={
         disabled
-          ? 'Apna plan khud badal nahi sakte — API bhi isko rokta hai.'
-          : 'Plan, status aur expiry badlein. Change audit log me record hoga.'
+          ? 'You cannot change your own plan — the API blocks this too.'
+          : 'Change the plan, status and expiry. The change is recorded in the audit log.'
       }
       actions={
         <Button onClick={() => void save()} loading={saving} disabled={disabled}>
-          Plan update karein
+          Update plan
         </Button>
       }>
       {autopay ? (
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-line bg-surface px-3 py-2 text-sm">
           <span className="text-ink">
             Autopay {autopay.status}: {autopay.planLabel},{' '}
-            {autopay.period === 'YEARLY' ? 'saalana' : 'mahina'}, Rs{' '}
+            {autopay.period === 'YEARLY' ? 'yearly' : 'monthly'}, Rs{' '}
             {(autopay.amount / 100).toLocaleString('en-IN')}
             {autopay.nextChargeAt
-              ? `, agla debit ${new Date(autopay.nextChargeAt).toLocaleDateString('en-IN')}`
+              ? `, next debit ${new Date(autopay.nextChargeAt).toLocaleDateString('en-IN')}`
               : ''}
-            . Plan badalne se pehle Autopay band karein.
+            . Stop Autopay before changing the plan.
           </span>
           <Button onClick={() => void stopAutopay()} disabled={disabled}>
-            Autopay band karein
+            Stop Autopay
           </Button>
         </div>
       ) : null}
@@ -476,7 +476,7 @@ function SubscriptionCard({
             ))}
           </select>
           <span className="text-xs text-muted">
-            Archived plans list me nahi aate — API unhe assign hone nahi deta.
+            Archived plans are not listed — the API does not allow assigning them.
           </span>
         </label>
 
@@ -502,7 +502,7 @@ function SubscriptionCard({
             value={expiresAt}
             disabled={disabled}
             onChange={(e) => setExpiresAt(e.target.value)}
-            hint="Aapke apne timezone me. Khaali chhodein to expiry hategi (lifetime)."
+            hint="In your own timezone. Leave blank to remove the expiry (lifetime)."
           />
           <div className="flex flex-wrap gap-2">
             <button
@@ -510,14 +510,14 @@ function SubscriptionCard({
               disabled={disabled}
               onClick={() => setExpiresAt(endOfTodayPlusDays(30))}
               className="rounded-md border border-line px-2 py-1 text-xs font-semibold text-muted hover:bg-ground disabled:opacity-50">
-              +30 din
+              +30 days
             </button>
             <button
               type="button"
               disabled={disabled}
               onClick={() => setExpiresAt(endOfTodayPlusDays(365))}
               className="rounded-md border border-line px-2 py-1 text-xs font-semibold text-muted hover:bg-ground disabled:opacity-50">
-              +1 saal
+              +1 year
             </button>
             <button
               type="button"
@@ -535,7 +535,7 @@ function SubscriptionCard({
           disabled={disabled}
           onChange={(e) => setReason(e.target.value)}
           placeholder="Payment received, manual upgrade…"
-          hint="Audit log me dikhega."
+          hint="Shown in the audit log."
         />
       </div>
     </Card>
@@ -568,7 +568,7 @@ function MembershipRoleControl({
 
   if (currentRole === OWNER_ROLE_KEY) {
     return (
-      <span title="Ownership transfer flow abhi backend me nahi hai">
+      <span title="The backend has no ownership transfer flow yet">
         <Badge label="OWNER · locked" tone="accent" />
       </span>
     );
@@ -581,7 +581,7 @@ function MembershipRoleControl({
       await adminApi.updateMembershipRole(shopId, userId, roleKey);
       onChanged();
     } catch (err) {
-      onError(err instanceof Error ? err.message : 'Membership role change fail');
+      onError(err instanceof Error ? err.message : 'Could not change the membership role');
     } finally {
       setSaving(false);
     }

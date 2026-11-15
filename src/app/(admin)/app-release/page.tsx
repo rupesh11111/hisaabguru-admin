@@ -30,12 +30,12 @@ const PLATFORMS: { key: AppReleasePlatform; label: string; storeHint: string }[]
   {
     key: 'android',
     label: 'Android (Play Store)',
-    storeHint: 'Khaali chhodein to app khud apna Play Store page kholega.',
+    storeHint: 'Leave blank and the app opens its own Play Store page.',
   },
   {
     key: 'ios',
     label: 'iOS (App Store)',
-    storeHint: 'iOS par store link zaroori hai, warna prompt nahi dikhega.',
+    storeHint: 'iOS needs a store link, or the prompt will not show.',
   },
 ];
 
@@ -49,7 +49,7 @@ export default function AppReleasePage() {
       .list()
       .then(setRows)
       .catch((err: unknown) =>
-        setError(err instanceof Error ? err.message : 'Load fail'),
+        setError(err instanceof Error ? err.message : 'Could not load'),
       );
   }, []);
 
@@ -58,11 +58,11 @@ export default function AppReleasePage() {
       <header>
         <h1 className="text-2xl font-black text-ink">App release</h1>
         <p className="text-sm text-muted">
-          Store par naya version daalne ke <strong>baad</strong> yahaan Latest version badhaiye.
-          Purane app wale ko &quot;Naya version aaya hai&quot; popup dikhega, jise wo baad me bhi
-          kar sakte hain. Minimum version se purane app <strong>band ho jaate hain</strong> jab
-          tak update na karein, isliye ise sirf tab badhaiye jab purana app sach me toot raha ho.
-          OTA (eas update) ke liye yahaan kuch nahi karna, app khud restart ka popup dikhata hai.
+          Raise the latest version here only <strong>after</strong> the new build is live in the store.
+          Users on an older app see a &quot;New version available&quot; popup, which they can
+          dismiss for later. Apps older than the minimum version <strong>stop working</strong> until
+          they update, so raise it only when the old app is genuinely broken.
+          OTA updates (eas update) need nothing here; the app shows its own restart popup.
         </p>
       </header>
 
@@ -90,7 +90,7 @@ export default function AppReleasePage() {
                 ...(prev ?? []).filter((r) => r.platform !== saved.platform),
                 saved,
               ]);
-              setNotice(`${p.label}: latest ${saved.latestVersion}, minimum ${saved.minVersion} save ho gaya.`);
+              setNotice(`${p.label}: latest ${saved.latestVersion}, minimum ${saved.minVersion} saved.`);
               setError(null);
             }}
             onError={setError}
@@ -142,7 +142,7 @@ function PlatformCard({
         }),
       );
     } catch (err) {
-      onError(err instanceof Error ? err.message : 'Save fail');
+      onError(err instanceof Error ? err.message : 'Save failed');
     } finally {
       setSaving(false);
       setConfirming(false);
@@ -154,8 +154,8 @@ function PlatformCard({
       title={label}
       subtitle={
         current
-          ? `Abhi: latest ${current.latestVersion}, minimum ${current.minVersion} · ${fmtDateTime(current.updatedAt)}`
-          : 'Abhi set nahi hai, isliye app koi update popup nahi dikhata.'
+          ? `Current: latest ${current.latestVersion}, minimum ${current.minVersion} · ${fmtDateTime(current.updatedAt)}`
+          : 'Not set yet, so the app shows no update popup.'
       }>
       <div className="grid gap-4 sm:grid-cols-2">
         <Input
@@ -165,7 +165,7 @@ function PlatformCard({
           placeholder="1.3.0"
         />
         <Input
-          label="Minimum version (isse purana band)"
+          label="Minimum version (older apps are blocked)"
           value={min}
           onChange={(e) => setMin(e.target.value.trim())}
           placeholder="1.1.0"
@@ -186,11 +186,11 @@ function PlatformCard({
       </div>
       {formatOk && !orderOk ? (
         <p className="mt-3 text-sm text-danger">
-          Minimum version latest se bada nahi ho sakta.
+          Minimum version cannot be higher than the latest version.
         </p>
       ) : null}
       {!formatOk && (latest || min) ? (
-        <p className="mt-3 text-sm text-danger">Version 1.2.0 jaisa likhiye.</p>
+        <p className="mt-3 text-sm text-danger">Enter a version like 1.2.0.</p>
       ) : null}
       <div className="mt-4 flex justify-end">
         <Button
@@ -203,9 +203,9 @@ function PlatformCard({
 
       <ConfirmDialog
         open={confirming}
-        title="Minimum version badhayein?"
-        message={`${min} se purane ${label} app turant band ho jaayenge jab tak user store se update na kare. Pakka karein ki ${latest} store par live hai.`}
-        confirmLabel="Haan, badhayein"
+        title="Raise the minimum version?"
+        message={`${label} apps older than ${min} will stop working immediately until the user updates from the store. Make sure ${latest} is live in the store.`}
+        confirmLabel="Yes, raise it"
         loading={saving}
         onConfirm={() => void save()}
         onCancel={() => setConfirming(false)}

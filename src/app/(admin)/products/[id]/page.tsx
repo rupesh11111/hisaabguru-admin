@@ -124,7 +124,7 @@ export default function ProductEditPage() {
       })
       .catch((err: unknown) => {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : 'Product load fail');
+          setError(err instanceof Error ? err.message : 'Could not load product');
         }
       })
       .finally(() => {
@@ -146,7 +146,7 @@ export default function ProductEditPage() {
       })
       .catch((err: unknown) => {
         if (!cancelled) {
-          setOptionsError(err instanceof Error ? err.message : 'Options load fail');
+          setOptionsError(err instanceof Error ? err.message : 'Could not load options');
         }
       });
     return () => {
@@ -167,7 +167,7 @@ export default function ProductEditPage() {
   /** Validates first, so the dialog never opens on a form that cannot be saved. */
   const requestSave = () => {
     if (!form.name.trim() || !form.category.trim() || !form.unit.trim()) {
-      setError('Name, category aur unit teeno zaroori hain');
+      setError('Name, category and unit are all required');
       return;
     }
     setError(null);
@@ -208,17 +208,17 @@ export default function ProductEditPage() {
       const c = updated.correction;
       setNotice(
         c
-          ? `Save ho gaya — ${c.propagatedCount} shop row update hui${
+          ? `Saved — ${c.propagatedCount} shop row(s) updated${
               c.skippedCount > 0
-                ? `, ${c.skippedCount} chhodi gayi (unhone khud badla tha)`
+                ? `, ${c.skippedCount} skipped (customised by the shop)`
                 : ''
             }.`
-          : 'Save ho gaya — display data me koi badlav nahi tha.',
+          : 'Saved — no change to display data.',
       );
       void adminApi.listProductCorrections(id).then(setCorrections);
     } catch (err) {
       // A 409 here means another catalog row already claims one of these barcodes.
-      setError(err instanceof ApiError ? err.message : 'Save fail');
+      setError(err instanceof ApiError ? err.message : 'Save failed');
     } finally {
       setSaving(false);
       setConfirmSave(false);
@@ -243,11 +243,11 @@ export default function ProductEditPage() {
     if (added.length) out.push(`Barcodes add: ${added.join(', ')}`);
     if (removed.length) out.push(`Barcodes remove: ${removed.join(', ')}`);
 
-    const before = baseline.offData ? 'cached' : 'khaali';
-    const after = form.offData ? 'cached' : 'khaali';
+    const before = baseline.offData ? 'cached' : 'empty';
+    const after = form.offData ? 'cached' : 'empty';
     if (before !== after) out.push(`OpenFoodFacts data: ${before} → ${after}`);
     else if (JSON.stringify(form.offData) !== JSON.stringify(baseline.offData)) {
-      out.push('OpenFoodFacts data refresh hui');
+      out.push('OpenFoodFacts data refreshed');
     }
     return out;
   }, [form, baseline, isNew]);
@@ -263,11 +263,11 @@ export default function ProductEditPage() {
       setProduct((prev) => (prev ? { ...prev, ...updated } : updated));
       setNotice(
         action === 'verify'
-          ? 'Approve ho gaya — ab doosri shops ko bhi prefill me milega.'
-          : 'Reject ho gaya — kisi shop ko prefill me nahi milega.',
+          ? 'Approved — other shops will now get it as a prefill.'
+          : 'Rejected — no shop will get it as a prefill.',
       );
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Action fail');
+      setError(err instanceof Error ? err.message : 'Action failed');
     } finally {
       setVerifying(false);
     }
@@ -279,7 +279,7 @@ export default function ProductEditPage() {
       await adminApi.deleteProduct(id);
       router.replace('/products');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Delete fail');
+      setError(err instanceof Error ? err.message : 'Delete failed');
       setDeleting(false);
       setConfirmDelete(false);
     }
@@ -302,19 +302,19 @@ export default function ProductEditPage() {
             ← Products
           </Link>
           <h1 className="mt-1 truncate text-2xl font-black text-ink">
-            {isNew ? 'Naya product' : form.name || (product?.name ?? 'Product')}
+            {isNew ? 'New product' : form.name || (product?.name ?? 'Product')}
           </h1>
           <p className="flex flex-wrap items-center gap-2 text-sm text-muted">
             {product ? (
               <>
-                <span>{stockedBy.length} shops stock kar rahi hain</span>
+                <span>Stocked by {stockedBy.length} shops</span>
                 <span aria-hidden>·</span>
                 <span className="tnum">
                   updated {fmtDateTime(product.updatedAt)}
                 </span>
               </>
             ) : (
-              <span>Global catalog me naya item add karein.</span>
+              <span>Add a new item to the global catalog.</span>
             )}
             {dirty ? <Badge label="Unsaved changes" tone="accent" /> : null}
             {product ? (
@@ -375,7 +375,7 @@ export default function ProductEditPage() {
       {error ? <ErrorNote message={error} /> : null}
       {optionsError ? (
         <ErrorNote
-          message={`Categories/units load nahi hue (${optionsError}). Maujooda value save ho sakti hai, par nayi value chunne ke liye page reload karein.`}
+          message={`Could not load categories/units (${optionsError}). The current value can still be saved; reload the page to pick a new one.`}
         />
       ) : null}
       {notice ? (
@@ -388,7 +388,7 @@ export default function ProductEditPage() {
         <div className="flex flex-col gap-6 lg:col-span-3">
           <Card
             title="Details"
-            subtitle="Yeh master data sab shops ko dikhta hai jab woh barcode scan karti hain.">
+            subtitle="This master data is shown to every shop when it scans the barcode.">
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="sm:col-span-2">
                 <Input
@@ -418,7 +418,7 @@ export default function ProductEditPage() {
                 onChange={(e) => patch({ packSize: e.target.value })}
                 placeholder="100 g"
                 maxLength={PACK_SIZE_MAX}
-                hint="Ek pack me kitna hai. Unit batata hai ki item kaise ginte hain."
+                hint="How much is in one pack. Unit says how the item is counted."
               />
             </div>
           </Card>
@@ -435,7 +435,7 @@ export default function ProductEditPage() {
           ) : isNew ? (
             <Card title="Photos">
               <p className="text-sm text-muted">
-                Pehle product save karein, phir photos add kar sakte hain.
+                Save the product first, then you can add photos.
               </p>
             </Card>
           ) : null}
@@ -465,7 +465,7 @@ export default function ProductEditPage() {
               {stockedBy.length === 0 ? (
                 <EmptyState
                   title="Zero shops"
-                  description="Naya product hai, ya sab shops ne archive kar diya."
+                  description="New product, or every shop has archived it."
                 />
               ) : (
                 <Table>
@@ -501,7 +501,7 @@ export default function ProductEditPage() {
           {corrections.length > 0 ? (
             <Card
               title={`Correction history (${corrections.length})`}
-              subtitle="Har change ka record — kya badla, kisne badla, kitni shops par asar pada.">
+              subtitle="A record of every change: what changed, who changed it, and how many shops it reached.">
               <Table>
                 <thead>
                   <tr>
@@ -551,7 +551,7 @@ export default function ProductEditPage() {
           {!isNew ? (
             <Card
               title="Danger zone"
-              subtitle="Delete karne par inventory rows ka snapshot data bacha rahega — sirf catalog link tutta hai.">
+              subtitle="Deleting keeps the snapshot data in inventory rows; only the catalog link is removed.">
               <Button variant="danger" onClick={() => setConfirmDelete(true)}>
                 Delete product
               </Button>
@@ -583,7 +583,7 @@ export default function ProductEditPage() {
                   value={
                     product.archivedAt
                       ? fmtDateTime(product.archivedAt)
-                      : 'nahi'
+                      : 'No'
                   }
                 />
               </dl>
@@ -595,13 +595,13 @@ export default function ProductEditPage() {
       <ConfirmDialog
         open={confirmSave}
         tone="primary"
-        title={isNew ? 'Product create karein?' : 'Changes save karein?'}
+        title={isNew ? 'Create product?' : 'Save changes?'}
         message={
           isNew
-            ? `"${form.name.trim()}" global catalog me add ho jayega — sab shops ise barcode scan pe dekhengi.`
-            : 'Yeh master data sab shops ko dikhta hai. Neeche dekh lein ki kya badal raha hai.'
+            ? `"${form.name.trim()}" will be added to the global catalog, and every shop will see it when scanning the barcode.`
+            : 'This master data is shown to every shop. Review what is changing below.'
         }
-        confirmLabel={isNew ? 'Haan, create karein' : 'Haan, save karein'}
+        confirmLabel={isNew ? 'Yes, create' : 'Yes, save'}
         loading={saving}
         onConfirm={() => void save()}
         onCancel={() => setConfirmSave(false)}>
@@ -610,10 +610,10 @@ export default function ProductEditPage() {
             <li>Name: {form.name.trim()}</li>
             <li>Category: {form.category.trim()}</li>
             <li>Unit: {form.unit.trim()}</li>
-            <li>Pack size: {form.packSize.trim() || 'koi nahi'}</li>
+            <li>Pack size: {form.packSize.trim() || 'None'}</li>
             <li>
               Barcodes:{' '}
-              {form.barcodes.length > 0 ? form.barcodes.join(', ') : 'koi nahi'}
+              {form.barcodes.length > 0 ? form.barcodes.join(', ') : 'None'}
             </li>
           </ul>
         ) : changes.length > 0 ? (
@@ -627,7 +627,7 @@ export default function ProductEditPage() {
             {stockedBy.length > 0 ? (
               <div>
                 <p className="mb-1 text-xs font-bold uppercase tracking-wide text-muted">
-                  Kaunsi shop pe kya asar hoga
+                  Effect on each shop
                 </p>
                 {/* Showing each shop's own value beside the new one is the point: it
                     is what lets the admin tell a typo from a deliberate rename. */}
@@ -644,9 +644,9 @@ export default function ProductEditPage() {
                         <span className="font-semibold text-ink">{sh.shopName}</span>
                         {skipped && !overrideCustomized ? (
                           <span className="text-xs text-muted">
-                            &quot;{sh.name}&quot; — khud badla hai,{' '}
+                            &quot;{sh.name}&quot; — customised by the shop,{' '}
                             <span className="font-semibold text-accent-deep">
-                              chhod diya jayega
+                              will be skipped
                             </span>
                           </span>
                         ) : (
@@ -677,11 +677,11 @@ export default function ProductEditPage() {
                 />
                 <span>
                   <span className="block font-semibold text-ink">
-                    Jinhone khud badla hai unko bhi overwrite karein
+                    Also overwrite shops that customised it
                   </span>
                   <span className="block text-xs text-muted">
-                    Tabhi lagayein jab wo rename nahi, typo ho. Audit me{' '}
-                    <code>forced</code> record hoga.
+                    Use only when it is a typo, not a rename. Recorded as{' '}
+                    <code>forced</code> in the audit log.
                   </span>
                 </span>
               </label>
@@ -692,20 +692,20 @@ export default function ProductEditPage() {
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               placeholder="Typo fix, packaging change…"
-              hint="Audit log me dikhega."
+              hint="Shown in the audit log."
             />
           </div>
         ) : (
           <p className="rounded-lg border border-line bg-ground p-3 text-sm text-muted">
-            Koi badlav detect nahi hua.
+            No changes detected.
           </p>
         )}
       </ConfirmDialog>
 
       <ConfirmDialog
         open={confirmDelete}
-        title="Product delete karein?"
-        message={`"${product?.name ?? ''}" global catalog se hat jayega. Shops ka apna data safe rahega.`}
+        title="Delete product?"
+        message={`"${product?.name ?? ''}" will be removed from the global catalog. Shops keep their own data.`}
         loading={deleting}
         onConfirm={() => void remove()}
         onCancel={() => setConfirmDelete(false)}
@@ -785,7 +785,7 @@ function OptionSelect({
       </select>
       {options !== null && value && !active.has(value) ? (
         <span className="text-xs text-muted">
-          Purani value hai, list me nahi. Rehne de sakte hain, ya list se chun lein.
+          Old value, not in the list. You can keep it or pick one from the list.
         </span>
       ) : null}
     </label>
@@ -832,7 +832,7 @@ function BarcodesCard({
       return;
     }
     if (barcodes.includes(normalized)) {
-      setFieldError('Yeh barcode pehle se list me hai');
+      setFieldError('This barcode is already in the list');
       return;
     }
     onChange([...barcodes, normalized]);
@@ -846,17 +846,17 @@ function BarcodesCard({
     try {
       const found = await lookupBarcode(code);
       if (!found) {
-        setLookupNote(`${code}: Open*Facts me record nahi hai — manually bharein`);
+        setLookupNote(`${code}: no record in Open*Facts. Fill in the details manually`);
         return;
       }
       onPrefill(found);
       setLookupNote(
         found.nameIsGuessed
-          ? `Aadhi detail mili (${found.source}) — naam check kar lein`
-          : `Mil gaya: ${found.name} (${found.source})`,
+          ? `Partial details found (${found.source}). Check the name`
+          : `Found: ${found.name} (${found.source})`,
       );
     } catch (err) {
-      setLookupNote(err instanceof BarcodeLookupError ? err.message : 'Lookup fail');
+      setLookupNote(err instanceof BarcodeLookupError ? err.message : 'Lookup failed');
     } finally {
       setLooking(null);
     }
@@ -865,12 +865,12 @@ function BarcodesCard({
   return (
     <Card
       title="Barcodes"
-      subtitle="USB scanner seedha yahan scan kar sakta hai — wo digits type karke Enter dabata hai.">
+      subtitle="A USB scanner can scan straight into this field: it types the digits and presses Enter.">
       <div className="flex flex-col gap-4">
         <div className="flex items-start gap-2">
           <div className="flex-1">
             <Input
-              label="Barcode add karein"
+              label="Add barcode"
               value={draft}
               onChange={(e) => {
                 setDraft(e.target.value);
@@ -886,7 +886,7 @@ function BarcodesCard({
               inputMode="numeric"
               autoComplete="off"
               error={fieldError ?? undefined}
-              hint="EAN-13 / UPC-A / UPC-E. Check digit verify hota hai, aur GTIN-13 me normalize."
+              hint="EAN-13 / UPC-A / UPC-E. The check digit is verified and the code is normalised to GTIN-13."
             />
           </div>
           <Button variant="secondary" onClick={add} className="mt-7">
@@ -895,7 +895,7 @@ function BarcodesCard({
         </div>
 
         {barcodes.length === 0 ? (
-          <p className="text-sm text-muted">Abhi koi barcode nahi joda.</p>
+          <p className="text-sm text-muted">No barcodes added yet.</p>
         ) : (
           <ul className="flex flex-col gap-2">
             {barcodes.map((code) => (
@@ -908,7 +908,7 @@ function BarcodesCard({
                     variant="secondary"
                     onClick={() => void lookup(code)}
                     loading={looking === code}>
-                    Details bharein
+                    Fill details
                   </Button>
                   <Button
                     variant="ghost"
