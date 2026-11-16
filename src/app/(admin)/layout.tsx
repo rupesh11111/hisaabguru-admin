@@ -18,6 +18,8 @@ const NAV = [
   { href: '/referrals', label: 'Referrals' },
   { href: '/app-release', label: 'App release' },
   { href: '/roles', label: 'Roles' },
+  // Maps every table, so only SUPER_ADMIN (`*`) sees it; the API enforces the same.
+  { href: '/database', label: 'Database', superAdminOnly: true },
 ];
 
 /**
@@ -39,6 +41,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const pendingProducts = usePendingProductCount(
     state.status === 'authenticated' && hasAdminAccess(state.user),
     pathname,
+  );
+  const nav = NAV.filter(
+    (item) =>
+      !('superAdminOnly' in item) ||
+      (state.status === 'authenticated' && state.user.permissions.includes('*')),
   );
   const badgeFor = (href: string) =>
     href === '/products' && pendingProducts ? pendingProducts : null;
@@ -91,7 +98,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </div>
 
         <nav className="flex flex-1 flex-col gap-0.5">
-          {NAV.map((item) => {
+          {nav.map((item) => {
             const active =
               item.href === '/' ? pathname === '/' : pathname.startsWith(item.href);
             return (
@@ -132,7 +139,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       <div className="flex min-w-0 flex-1 flex-col">
         {/* Sidebar collapses on narrow screens; this keeps navigation reachable. */}
         <nav className="sidebar-brand flex gap-1 overflow-x-auto px-3 py-2 md:hidden">
-          {NAV.map((item) => (
+          {nav.map((item) => (
             <Link
               key={item.href}
               href={item.href}

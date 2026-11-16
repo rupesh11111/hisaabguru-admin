@@ -24,6 +24,11 @@ import type {
   OtpRequestResponse,
   PermissionCatalog,
   ProductDetail,
+  DatabaseSchema,
+  SqlResult,
+  SqlStatus,
+  TableRowsPage,
+  TableRowsParams,
   MergePreview,
   MergeResult,
   ProductListPage,
@@ -185,6 +190,24 @@ export const authApi = {
 
 export const adminApi = {
   stats: () => request<AdminStats>('/admin/stats'),
+  /** Structure only, no rows. SUPER_ADMIN (`*`) only. */
+  schema: () => request<DatabaseSchema>('/admin/schema'),
+  /** Read-only rows, secrets redacted. SUPER_ADMIN only; the API logs every call. */
+  tableRows: (table: string, params: TableRowsParams = {}) =>
+    request<TableRowsPage>(`/admin/schema/tables/${encodeURIComponent(table)}/rows`, {
+      query: {
+        cursor: params.cursor,
+        pageSize: params.pageSize,
+        q: params.q || undefined,
+        column: params.column || undefined,
+        sort: params.sort || undefined,
+        dir: params.sort ? params.dir : undefined,
+      },
+    }),
+  sqlStatus: () => request<SqlStatus>('/admin/sql/status'),
+  /** One read-only statement, run as a SELECT-only database role. */
+  runSql: (sql: string) =>
+    request<SqlResult>('/admin/sql', { method: 'POST', body: { sql } }),
 
   // Products catalog
   listProducts: (params: ProductListParams = {}) =>

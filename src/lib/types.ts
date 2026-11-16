@@ -457,3 +457,115 @@ export type ChangeSubscriptionInput = {
   reason?: string;
   paymentRef?: string;
 };
+
+// ----- Database schema (SUPER_ADMIN) -----
+
+export type SchemaColumn = {
+  name: string;
+  /** Physical column name; differs from `name` only under `@map`. */
+  column: string;
+  type: string;
+  kind: 'scalar' | 'enum';
+  isList: boolean;
+  nullable: boolean;
+  isId: boolean;
+  isUnique: boolean;
+  isUpdatedAt: boolean;
+  default: string | null;
+  references: { model: string; table: string; column: string; onDelete: string } | null;
+  documentation: string | null;
+};
+
+export type SchemaRelation = {
+  name: string;
+  model: string;
+  table: string;
+  cardinality: 'many-to-one' | 'one-to-one' | 'one-to-many';
+  fields: string[];
+  references: string[];
+  onDelete: string | null;
+};
+
+export type SchemaIndex = {
+  name: string;
+  unique: boolean;
+  primary: boolean;
+  method: string;
+  definition: string;
+};
+
+export type SchemaTable = {
+  model: string;
+  table: string;
+  documentation: string | null;
+  /** Exact for small never-analysed tables (`rowCountExact`), else Postgres's estimate. */
+  rowEstimate: number | null;
+  rowCountExact: boolean;
+  totalBytes: number | null;
+  primaryKey: string[];
+  columns: SchemaColumn[];
+  relations: SchemaRelation[];
+  indexes: SchemaIndex[];
+};
+
+export type SchemaEnum = { name: string; values: string[]; documentation: string | null };
+
+export type DatabaseSchema = {
+  generatedAt: string;
+  tables: SchemaTable[];
+  enums: SchemaEnum[];
+};
+
+export type TableRowsColumn = {
+  column: string;
+  type: string;
+  kind: 'scalar' | 'enum';
+  isList: boolean;
+  isId: boolean;
+  /** Key, foreign key or unique: a search on it is an exact, index-served match. */
+  exact: boolean;
+  /** Leading column of an index: searching or sorting it stays fast on big tables. */
+  indexed: boolean;
+  /** Secret: the cell is always `{ redacted: true }`, never the value. */
+  redacted: boolean;
+  sortable: boolean;
+};
+
+export type TableRowsPage = {
+  table: string;
+  columns: TableRowsColumn[];
+  rows: Record<string, unknown>[];
+  pageSize: number;
+  hasMore: boolean;
+  /** Pass back as `cursor` for the next page; null on the last page. */
+  nextCursor: string | null;
+  /** Sent on the first page only. Null when counting took too long. */
+  total: number | null;
+  /** `total` is Postgres's estimate (large unfiltered table). */
+  totalIsEstimate: boolean;
+};
+
+export type TableRowsParams = {
+  pageSize?: number;
+  /** Keyset cursor from the previous page's `nextCursor`. */
+  cursor?: string;
+  q?: string;
+  /** Search one column; all text columns when omitted. */
+  column?: string;
+  sort?: string;
+  dir?: 'asc' | 'desc';
+};
+
+export type SqlStatus = { enabled: true } | { enabled: false; reason: string };
+
+export type SqlResult = {
+  /** In result order; names may repeat (`SELECT a.id, b.id`). */
+  columns: Array<{ name: string; type: string }>;
+  /** One array per row, aligned with `columns`. */
+  rows: unknown[][];
+  rowCount: number;
+  /** More rows existed than `maxRows`; add a LIMIT or narrow the query. */
+  truncated: boolean;
+  maxRows: number;
+  durationMs: number;
+};
