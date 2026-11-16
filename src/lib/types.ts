@@ -46,7 +46,14 @@ export type CurrentUser = {
 // ----- Dashboard -----
 
 export type AdminStats = {
-  totals: { users: number; shops: number; bills: number; products: number };
+  totals: {
+    users: number;
+    shops: number;
+    bills: number;
+    products: number;
+    /** Active rows still awaiting approval. */
+    pendingProducts: number;
+  };
   byTier: Partial<Record<SubscriptionTier, number>>;
   byRole: Partial<Record<PlatformRole, number>>;
 };
@@ -78,11 +85,14 @@ export type ProductListItem = {
   /** How many distinct shops independently typed the same name. Ranking only. */
   consensusShops: number;
   archivedAt: string | null;
+  /** Set when this row was merged into another; it is then archived for good. */
+  mergedIntoId: string | null;
   createdAt: string;
   updatedAt: string;
 };
 
 export type ProductDetail = ProductListItem & {
+  mergedInto: { id: string; name: string } | null;
   /** Every photo, first shown first; `imageUrl` is the first of these. */
   imageUrls: string[];
   openFoodFactsData: Record<string, unknown> | null;
@@ -161,6 +171,36 @@ export type ProductListParams = {
   limit?: number;
   offset?: number;
   includeArchived?: boolean;
+  verification?: ProductVerification;
+  /** `upstream` = any third-party database (Open*Facts, barcodereport, upcitemdb). */
+  source?: ProductSource | 'upstream';
+  /** Wins over `includeArchived`. */
+  archived?: 'active' | 'archived' | 'all';
+  category?: string;
+  hasBarcode?: boolean;
+  hasPhoto?: boolean;
+  sort?: ProductSort;
+};
+
+export type ProductSort = 'name' | 'newest' | 'shops';
+
+export type MergePreview = {
+  target: Pick<ProductListItem, 'id' | 'name' | 'category' | 'unit' | 'verification'>;
+  /** Barcode claims that will move to the target. */
+  barcodes: string[];
+  shopsToMove: number;
+  /** Shops stocking both: their source row stays on the archived source. */
+  conflictShops: Array<{ shopId: string; shopName: string; itemName: string }>;
+  openReports: number;
+  newPhotos: number;
+};
+
+export type MergeResult = {
+  targetId: string;
+  movedBarcodes: number;
+  movedShops: number;
+  movedReports: number;
+  conflictShops: MergePreview['conflictShops'];
 };
 
 /**

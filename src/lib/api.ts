@@ -24,6 +24,8 @@ import type {
   OtpRequestResponse,
   PermissionCatalog,
   ProductDetail,
+  MergePreview,
+  MergeResult,
   ProductListPage,
   ProductListParams,
   ShopDetail,
@@ -192,6 +194,13 @@ export const adminApi = {
         limit: params.limit,
         offset: params.offset,
         includeArchived: params.includeArchived ? 'true' : undefined,
+        verification: params.verification,
+        source: params.source,
+        archived: params.archived,
+        category: params.category,
+        hasBarcode: params.hasBarcode === undefined ? undefined : String(params.hasBarcode),
+        hasPhoto: params.hasPhoto === undefined ? undefined : String(params.hasPhoto),
+        sort: params.sort,
       },
     }),
   getProduct: (id: string) => request<ProductDetail>(`/admin/products/${id}`),
@@ -219,6 +228,25 @@ export const adminApi = {
       method: 'POST',
       body: { productIds },
     }),
+  /** Same 25-id server cap as `verifyProducts`. Pending rows only. */
+  rejectProducts: (productIds: string[]) =>
+    request<{ rejected: number }>('/admin/products/reject', {
+      method: 'POST',
+      body: { productIds },
+    }),
+  archiveProduct: (id: string) =>
+    request<{ archived: boolean }>(`/admin/products/${id}/archive`, { method: 'POST' }),
+  restoreProduct: (id: string) =>
+    request<{ restored: boolean }>(`/admin/products/${id}/restore`, { method: 'POST' }),
+  mergePreview: (id: string, intoId: string) =>
+    request<MergePreview>(`/admin/products/${id}/merge-preview`, { query: { intoId } }),
+  /** Folds `id` into `intoId`; `id` is archived for good. */
+  mergeProduct: (id: string, intoId: string) =>
+    request<MergeResult>(`/admin/products/${id}/merge`, {
+      method: 'POST',
+      body: { intoId },
+    }),
+  /** The API refuses (409) unless the product is archived first. */
   deleteProduct: (id: string) =>
     request<{ ok: boolean }>(`/admin/products/${id}`, { method: 'DELETE' }),
   /** Per-row outcomes; never throws because one row was bad — inspect `results`. */

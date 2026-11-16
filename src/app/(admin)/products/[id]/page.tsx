@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { fmtDateTime } from '@/lib/format';
+import { MergeProductDialog } from '@/components/merge-product-dialog';
 import { OffDataPanel } from '@/components/off-data-panel';
 import { ProductPhotos } from '@/components/product-photos';
 import {
@@ -21,6 +22,7 @@ import {
   Th,
 } from '@/components/ui';
 import { ApiError, adminApi, catalogOptionsApi } from '@/lib/api';
+import { notifyCatalogChanged } from '@/lib/catalog-events';
 import {
   BarcodeLookupError,
   assertScannableBarcode,
@@ -98,6 +100,8 @@ export default function ProductEditPage() {
   const [overrideCustomized, setOverrideCustomized] = useState(false);
   const [corrections, setCorrections] = useState<ProductCorrection[]>([]);
   const [verifying, setVerifying] = useState(false);
+  const [archiving, setArchiving] = useState(false);
+  const [mergeOpen, setMergeOpen] = useState(false);
   /** Null until loaded, and stays null if loading failed. */
   const [catalog, setCatalog] = useState<{
     categories: CatalogOption[];
@@ -261,6 +265,7 @@ export default function ProductEditPage() {
           ? await adminApi.verifyProduct(id)
           : await adminApi.rejectProduct(id);
       setProduct((prev) => (prev ? { ...prev, ...updated } : updated));
+      notifyCatalogChanged();
       setNotice(
         action === 'verify'
           ? 'Approved — other shops will now get it as a prefill.'
@@ -270,6 +275,27 @@ export default function ProductEditPage() {
       setError(err instanceof Error ? err.message : 'Action failed');
     } finally {
       setVerifying(false);
+    }
+  };
+
+  const setArchived = async (archive: boolean) => {
+    setArchiving(true);
+    setError(null);
+    try {
+      if (archive) await adminApi.archiveProduct(id);
+      else await adminApi.restoreProduct(id);
+      const fresh = await adminApi.getProduct(id);
+      setProduct(fresh);
+      notifyCatalogChanged();
+      setNotice(
+        archive
+          ? 'Archived — hidden from the catalog and never prefilled. Its barcodes stay claimed.'
+          : 'Restored to the active catalog.',
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Action failed');
+    } finally {
+      setArchiving(false);
     }
   };
 
@@ -336,6 +362,11 @@ export default function ProductEditPage() {
                   }
                 />
                 <Badge label={product.source} tone="neutral" />
+                {product.mergedIntoId ? (
+                  <Badge label="Merged" tone="neutral" />
+                ) : product.archivedAt ? (
+                  <Badge label="Archived" tone="danger" />
+                ) : null}
                 {product.consensusShops >= 3 ? (
                   <Badge
                     label={`${product.consensusShops} shops agree`}
@@ -373,6 +404,21 @@ export default function ProductEditPage() {
       </header>
 
       {error ? <ErrorNote message={error} /> : null}
+      {product?.mergedIntoId ? (
+        <p className="rounded-lg border border-line bg-ground px-3 py-2 text-sm text-ink">
+          This product was merged into{' '}
+          {product.mergedInto ? (
+            <Link
+              href={`/products/${product.mergedInto.id}`}
+              className="font-semibold text-brand-deep hover:underline">
+              {product.mergedInto.name}
+            </Link>
+          ) : (
+            'another product'
+          )}
+          . Its barcodes and shops moved there; edit that product instead.
+        </p>
+      ) : null}
       {optionsError ? (
         <ErrorNote
           message={`Could not load categories/units (${optionsError}). The current value can still be saved; reload the page to pick a new one.`}
@@ -548,13 +594,42 @@ export default function ProductEditPage() {
             </Card>
           ) : null}
 
-          {!isNew ? (
+          {product && !product.mergedIntoId ? (
             <Card
-              title="Danger zone"
-              subtitle="Deleting keeps the snapshot data in inventory rows; only the catalog link is removed.">
-              <Button variant="danger" onClick={() => setConfirmDelete(true)}>
-                Delete product
-              </Button>
+              title="Clean up"
+              subtitle="Archive hides a product but keeps its barcodes claimed, so a scan never creates a duplicate. Merge folds a duplicate into the product it duplicates.">
+              <div className="flex flex-wrap gap-2">
+                {product.archivedAt ? (
+                  <Button
+                    variant="secondary"
+                    loading={archiving}
+                    onClick={() => void setArchived(false)}>
+                    Restore
+                  </Button>
+                ) : (
+                  <>
+                    <Button variant="secondary" onClick={() => setMergeOpen(true)}>
+                      Merge into another product…
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      loading={archiving}
+                      onClick={() => void setArchived(true)}>
+                      Archive
+                    </Button>
+                  </>
+                )}
+                {product.archivedAt ? (
+                  <Button variant="danger" onClick={() => setConfirmDelete(true)}>
+                    Delete permanently
+                  </Button>
+                ) : null}
+              </div>
+              {!product.archivedAt ? (
+                <p className="mt-3 text-xs text-muted">
+                  Permanent delete is available after archiving.
+                </p>
+              ) : null}
             </Card>
           ) : null}
         </div>
@@ -704,12 +779,23 @@ export default function ProductEditPage() {
 
       <ConfirmDialog
         open={confirmDelete}
-        title="Delete product?"
-        message={`"${product?.name ?? ''}" will be removed from the global catalog. Shops keep their own data.`}
+        title="Delete permanently?"
+        message={`"${product?.name ?? ''}" will be removed for good, with its correction history. Its barcodes become free, so the next scan of one creates a new product. Shops keep their own item data.`}
         loading={deleting}
         onConfirm={() => void remove()}
         onCancel={() => setConfirmDelete(false)}
       />
+
+      {mergeOpen && product ? (
+        <MergeProductDialog
+          source={{ id: product.id, name: product.name }}
+          onClose={() => setMergeOpen(false)}
+          onMerged={(res) => {
+            notifyCatalogChanged();
+            router.replace(`/products/${res.targetId}`);
+          }}
+        />
+      ) : null}
     </div>
   );
 }

@@ -40,7 +40,11 @@ export default function OverviewPage() {
         <StatTile label="Users" value={stats.totals.users} />
         <StatTile label="Shops" value={stats.totals.shops} />
         <StatTile label="Bills" value={stats.totals.bills} />
-        <StatTile label="Catalog products" value={stats.totals.products} />
+        <StatTile
+          label="Catalog products"
+          value={stats.totals.products}
+          hint={`${stats.totals.pendingProducts} pending review`}
+        />
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">

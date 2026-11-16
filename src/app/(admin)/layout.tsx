@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 
 import { Button, Spinner } from '@/components/ui';
+import { usePendingProductCount } from '@/lib/catalog-events';
 import { hasAdminAccess, useSession } from '@/lib/session';
 
 const NAV = [
@@ -35,6 +36,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     if (state.status === 'anonymous') router.replace('/login');
   }, [state.status, router]);
 
+  const pendingProducts = usePendingProductCount(
+    state.status === 'authenticated' && hasAdminAccess(state.user),
+    pathname,
+  );
+  const badgeFor = (href: string) =>
+    href === '/products' && pendingProducts ? pendingProducts : null;
+
   if (state.status === 'loading') {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -64,9 +72,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     <div className="flex min-h-screen">
       <aside className="sidebar-brand hidden w-56 shrink-0 flex-col p-4 text-white md:flex">
         <div className="flex items-center gap-3 pb-6">
-          <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-white text-lg">
-            🧾
-          </span>
+          {/* eslint-disable-next-line @next/next/no-img-element -- static 128px asset; next/image adds nothing here. */}
+          <img
+            src="/logo.png"
+            alt=""
+            width={40}
+            height={40}
+            className="size-10 shrink-0 rounded-xl"
+          />
           <span>
             <span className="block text-[15px] font-extrabold leading-tight">
               hisaabGuru
@@ -85,12 +98,19 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               <Link
                 key={item.href}
                 href={item.href}
-                className={`rounded-lg px-3 py-2 text-sm font-semibold transition ${
+                className={`flex items-center justify-between gap-2 rounded-lg px-3 py-2 text-sm font-semibold transition ${
                   active
                     ? 'bg-white/20 text-white'
                     : 'text-white/85 hover:bg-white/10'
                 }`}>
                 {item.label}
+                {badgeFor(item.href) ? (
+                  <span
+                    className="tnum rounded-full bg-white px-2 py-0.5 text-[11px] font-bold text-brand-deep"
+                    title="Products awaiting review">
+                    {badgeFor(item.href)}
+                  </span>
+                ) : null}
               </Link>
             );
           })}
@@ -118,6 +138,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               href={item.href}
               className="whitespace-nowrap rounded-lg px-3 py-1.5 text-sm font-semibold text-white/85 hover:bg-white/10">
               {item.label}
+              {badgeFor(item.href) ? (
+                <span className="tnum ml-1.5 rounded-full bg-white px-1.5 text-[11px] font-bold text-brand-deep">
+                  {badgeFor(item.href)}
+                </span>
+              ) : null}
             </Link>
           ))}
         </nav>

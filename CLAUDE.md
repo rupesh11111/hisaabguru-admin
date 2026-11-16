@@ -66,3 +66,9 @@ Approving a product here is what lets it be prefilled into **other** shops' inve
 into every shop that has not customised that field and notifies them by push. Both are
 cross-tenant and audited — see `hisaabguru-backend/CLAUDE.md` before changing anything
 on the API side of this.
+
+Approval stays a human act even for rows from a third-party database: provenance is not
+trust (Open*Facts returns French names, barcodes as names). The products list's bulk
+approve/reject is capped at 25, matching the API's `VerifyManyDto` — do not add "approve
+all" or an auto-verify for upstream rows. Pages that change the pending count call
+`notifyCatalogChanged()` (`lib/catalog-events.ts`) so the sidebar badge refreshes.
