@@ -50,11 +50,12 @@ ENV PORT=3100
 # from outside the container.
 ENV HOSTNAME=0.0.0.0
 
-# standalone/ holds server.js and the traced deps; static/ is not included in it
-# and must be copied separately or every asset 404s. (No public/ dir in this
-# project — add a COPY for it if one is ever introduced.)
+# standalone/ holds server.js and the traced deps; neither static/ nor public/ is
+# included in it, so both must be copied separately or those files 404 (the
+# sidebar logo is public/logo.png).
 COPY --from=builder --chown=app:app /app/.next/standalone ./
 COPY --from=builder --chown=app:app /app/.next/static ./.next/static
+COPY --from=builder --chown=app:app /app/public ./public
 
 USER app
 
